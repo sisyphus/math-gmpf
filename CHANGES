@@ -1,6 +1,8 @@
 0.41
  - Tweaks to Math::GMPf::gmp_v() and Math::GMPf::V::gmp_v()
  - Add metadata to Makefile.PL.
+ - No longer define USE_64_BIT_INT if ivtype is 'long'.
+ - Rename USE_64_BIT_INT #define to MATH_GMPF_NEED_LONG_LONG_INT
 
 0.39
  - Additional tweaks to t/overload.t and t/use64bitint.t in relation to accommodating
