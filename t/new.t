@@ -137,7 +137,7 @@ Rmpf_set_default_prec(100);
 my $f27 = Math::GMPf->new(36028797018964023);
 my $f28 = Math::GMPf->new('36028797018964023');
 
-if(Math::GMPf::_has_longlong()) {
+if($Config{ivsize} > 4) {
   if($f27 == $f28) {$ok .= 'i'}
   else{warn "3i: Should have $f27 == $f28\n"}
 }
