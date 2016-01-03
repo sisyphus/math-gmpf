@@ -1097,7 +1097,7 @@ __END__
 
    This program is free software; you may redistribute it and/or
    modify it under the same terms as Perl itself.
-   Copyright 2006-2013 Sisyphus
+   Copyright 2006-2016 Sisyphus
 
 =head1 AUTHOR
 
