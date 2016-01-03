@@ -2290,6 +2290,22 @@ SV * _wrap_count(pTHX) {
 SV * _get_xs_version(pTHX) {
      return newSVpv(XS_VERSION, 0);
 }
+
+SV * _GMP_LIMB_BITS(pTHX) {
+#ifdef GMP_LIMB_BITS
+     return newSVuv(GMP_LIMB_BITS);
+#else
+     return &PL_sv_undef;
+#endif
+}
+
+SV * _GMP_NAIL_BITS(pTHX) {
+#ifdef GMP_NAIL_BITS
+     return newSVuv(GMP_NAIL_BITS);
+#else
+     return &PL_sv_undef;
+#endif
+}
 MODULE = Math::GMPf  PACKAGE = Math::GMPf
 
 PROTOTYPES: DISABLE
@@ -3622,6 +3638,20 @@ SV *
 _get_xs_version ()
 CODE:
   RETVAL = _get_xs_version (aTHX);
+OUTPUT:  RETVAL
+
+
+SV *
+_GMP_LIMB_BITS ()
+CODE:
+  RETVAL = _GMP_LIMB_BITS (aTHX);
+OUTPUT:  RETVAL
+
+
+SV *
+_GMP_NAIL_BITS ()
+CODE:
+  RETVAL = _GMP_NAIL_BITS (aTHX);
 OUTPUT:  RETVAL
 
 
