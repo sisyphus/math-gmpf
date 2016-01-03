@@ -1,3 +1,5 @@
+0.42
+
 0.41
  - Tweaks to Math::GMPf::gmp_v() and Math::GMPf::V::gmp_v()
  - Add metadata to Makefile.PL.
