@@ -76,7 +76,7 @@ fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
     );
-    our $VERSION = '0.41';
+    our $VERSION = '0.42';
     #$VERSION = eval $VERSION;
 
     DynaLoader::bootstrap Math::GMPf $VERSION;
