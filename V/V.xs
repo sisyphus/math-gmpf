@@ -1,3 +1,10 @@
+
+#ifdef  __MINGW32__
+#ifndef __USE_MINGW_ANSI_STDIO
+#define __USE_MINGW_ANSI_STDIO 1
+#endif
+#endif
+
 #define PERL_NO_GET_CONTEXT 1
 
 #include "EXTERN.h"
@@ -36,16 +43,21 @@ SV * ___GMP_CFLAGS(pTHX) {
 #endif
 }
 
+/*
+Removed - we don't want library functions in this module
+
 SV * gmp_v(pTHX) {
 #if __GNU_MP_VERSION >= 4
      return newSVpv(gmp_version, 0);
 #else
-     return newSVpv("'gmp_version' is not implemented by this ancient build of gmp", 0);
+     warn("From Math::GMPf::V::gmp_v: 'gmp_version' is not implemented - returning '0'");
+     return newSVpv("0", 0);
 #endif
 }
+*/
 
 
-MODULE = Math::GMPf::V	PACKAGE = Math::GMPf::V
+MODULE = Math::GMPf::V  PACKAGE = Math::GMPf::V
 
 PROTOTYPES: DISABLE
 
@@ -82,13 +94,6 @@ SV *
 ___GMP_CFLAGS ()
 CODE:
   RETVAL = ___GMP_CFLAGS (aTHX);
-OUTPUT:  RETVAL
-
-
-SV *
-gmp_v ()
-CODE:
-  RETVAL = gmp_v (aTHX);
 OUTPUT:  RETVAL
 
 
