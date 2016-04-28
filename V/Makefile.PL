@@ -2,7 +2,6 @@ use ExtUtils::MakeMaker;
 my %options = %{
 {
   'NAME' => 'Math::GMPf::V',
-  'LIBS' => $LIBS,
   'INC' => $INC,
   'VERSION_FROM' => 'V.pm'
 }
