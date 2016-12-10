@@ -11,34 +11,49 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <gmp.h>
 
-#ifdef _MSC_VER
-#pragma warning(disable:4700 4715 4716)
-#endif
+#include "math_gmpf_include.h"
 
-#if defined MATH_GMPF_NEED_LONG_LONG_INT
-#ifndef _MSC_VER
-#include <inttypes.h>
-#endif
-#endif
+int nok_pok = 0; /* flag that is incremented whenever a scalar that is both *
+                  * NOK and POK is passed to new or an overloaded operator  */
 
-#define NEG_ZERO_BUG 50103 /* A bug affecting mpf_fits_u*_p functions     */
-                           /* Fixed in gmp after __GNU_MP_RELEASE 50103 ? */
+int NOK_POK_val(pTHX) {
+  /* return the numeric value of $Math::GMPf::NOK_POK */
+  return SvIV(get_sv("Math::GMPf::NOK_POK", 0));
+}
 
-#ifdef OLDPERL
-#define SvUOK SvIsUV
-#endif
+int _win32_infnanstring(char * s) { /* MS Windows only - detect 1.#INF and 1.#IND
+                                     * Need to do this to correctly handle a scalar
+                                     * that is both NOK and POK on older win32 perls */
 
-#ifndef Newx
-#  define Newx(v,n,t) New(0,v,n,t)
-#endif
+  /*************************************
+  * if input string    =~ /^\-1\.#INF$/ return -1
+  * elsif input string =~ /^\+?1\.#INF$/i return 1
+  * elsif input string =~ /^(\-|\+)?1\.#IND$/i return 2
+  * else return 0
+  **************************************/
 
-#ifndef Newxz
-#  define Newxz(v,n,t) Newz(0,v,n,t)
+#ifdef _WIN32_BIZARRE_INFNAN
+
+  int sign = 1;
+  int factor = 1;
+
+  if(s[0] == '-') {
+    sign = -1;
+    s++;
+  }
+  else {
+    if(s[0] == '+') s++;
+  }
+
+  if(!strcmp(s, "1.#INF")) return sign;
+  if(!strcmp(s, "1.#IND")) return 2;
+
+  return 0;
+#else
+  croak("Math::GMPf::_win32_infnanstring not implemented for this build of perl");
 #endif
+}
 
 unsigned long Rmpf_get_default_prec(void) {
      return mpf_get_default_prec();
@@ -201,7 +216,7 @@ SV * Rmpf_init_set_d(pTHX_ double a) {
 }
 
 void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
-#ifdef USE_LONG_DOUBLE
+#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
      char buffer[50];
      int exp, exp2 = 0;
      long double fr;
@@ -678,19 +693,19 @@ SV * overload_mul(pTHX_ SV * a, SV * b, SV * third) {
      }
 #endif
 
-     if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
-       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
-#else
-       mpf_set_d(*mpf_t_obj, SvNVX(b));
-#endif
+     if(SvPOK(b)) {
+       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_mul");
        mpf_mul(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
 
-     if(SvPOK(b)) {
-       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_mul");
+     if(SvNOK(b)) {
+#ifdef NV_IS_LONG_DOUBLE
+       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
+#else
+       mpf_set_d(*mpf_t_obj, SvNVX(b));
+#endif
        mpf_mul(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
@@ -772,19 +787,19 @@ SV * overload_add(pTHX_ SV * a, SV * b, SV * third) {
      }
 #endif
 
-     if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
-       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
-#else
-       mpf_set_d(*mpf_t_obj, SvNVX(b));
-#endif
+     if(SvPOK(b)) {
+       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_add");
        mpf_add(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
 
-     if(SvPOK(b)) {
-       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_add");
+     if(SvNOK(b)) {
+#ifdef NV_IS_LONG_DOUBLE
+       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
+#else
+       mpf_set_d(*mpf_t_obj, SvNVX(b));
+#endif
        mpf_add(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
@@ -870,20 +885,20 @@ SV * overload_sub(pTHX_ SV * a, SV * b, SV * third) {
      }
 #endif
 
-     if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
-       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
-#else
-       mpf_set_d(*mpf_t_obj, SvNVX(b));
-#endif
+     if(SvPOK(b)) {
+       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_sub");
        if(third == &PL_sv_yes) mpf_sub(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        else mpf_sub(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
 
-     if(SvPOK(b)) {
-       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_sub");
+     if(SvNOK(b)) {
+#ifdef NV_IS_LONG_DOUBLE
+       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
+#else
+       mpf_set_d(*mpf_t_obj, SvNVX(b));
+#endif
        if(third == &PL_sv_yes) mpf_sub(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        else mpf_sub(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
@@ -972,20 +987,20 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
      }
 #endif
 
-     if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
-       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
-#else
-       mpf_set_d(*mpf_t_obj, SvNVX(b));
-#endif
+     if(SvPOK(b)) {
+       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_div");
        if(third == &PL_sv_yes) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        else mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
      }
 
-     if(SvPOK(b)) {
-       if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_div");
+     if(SvNOK(b)) {
+#ifdef NV_IS_LONG_DOUBLE
+       _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
+#else
+       mpf_set_d(*mpf_t_obj, SvNVX(b));
+#endif
        if(third == &PL_sv_yes) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        else mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
        return obj_ref;
@@ -1075,25 +1090,35 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_gt");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret > 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1104,17 +1129,7 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_gt");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret > 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1122,8 +1137,8 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret > 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_gt");
 }
@@ -1141,25 +1156,35 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_gte");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret >= 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1170,17 +1195,7 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_gte");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret >= 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1188,8 +1203,8 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret >= 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_gte");
 }
@@ -1207,25 +1222,35 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_lt");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret < 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1236,17 +1261,7 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_lt");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret < 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1254,8 +1269,8 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret < 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_lt");
 }
@@ -1273,25 +1288,35 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_lte");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret <= 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1302,17 +1327,7 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_lte");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret <= 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1320,8 +1335,8 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret <= 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_lte");
 }
@@ -1340,7 +1355,7 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
@@ -1348,7 +1363,7 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
@@ -1356,11 +1371,22 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_spaceship");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret < 0) return newSViv(-1);
+       if(ret > 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1372,18 +1398,7 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_spaceship");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret < 0) return newSViv(-1);
-       if(ret > 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1392,8 +1407,8 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
          if(ret < 0) return newSViv(-1);
          if(ret > 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_spaceship");
 }
@@ -1410,23 +1425,32 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
        mpf_clear(t);
        if(ret == 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(ret == 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(ret == 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_equiv");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(ret == 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1436,16 +1460,7 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
        mpf_clear(t);
        if(ret == 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_equiv");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(ret == 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1453,8 +1468,8 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret == 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_equiv");
 }
@@ -1472,24 +1487,34 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret != 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #else
      if(SvUOK(b)) {
        ret = mpf_cmp_ui(*a, SvUVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret != 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
      if(SvIOK(b)) {
        ret = mpf_cmp_si(*a, SvIVX(b));
        if(third == &PL_sv_yes) ret *= -1;
        if(ret != 0) return newSViv(1);
        return newSViv(0);
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+         croak("Invalid string supplied to Math::GMPf::overload_not_equiv");
+       ret = mpf_cmp(*a, t);
+       mpf_clear(t);
+       if(third == &PL_sv_yes) ret *= -1;
+       if(ret != 0) return newSViv(1);
+       return newSViv(0);
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1500,17 +1525,7 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
        if(third == &PL_sv_yes) ret *= -1;
        if(ret != 0) return newSViv(1);
        return newSViv(0);
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_not_equiv");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret != 0) return newSViv(1);
-       return newSViv(0);
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
@@ -1518,8 +1533,8 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
          ret = mpf_cmp(*a, *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          if(ret != 0) return newSViv(1);
          return newSViv(0);
-         }
        }
+     }
 
      croak("Invalid argument supplied to Math::GMPf::overload_not_equiv");
 }
@@ -1671,31 +1686,40 @@ SV * overload_mul_eq(pTHX_ SV * a, SV * b, SV * third) {
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_mul_eq");
-         }
+       }
        mpf_mul(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
+     }
 #else
      if(SvUOK(b)) {
        mpf_mul_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
        return a;
-       }
+     }
 
      if(SvIOK(b)) {
        if(SvIV(b) >= 0) {
          mpf_mul_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
-         }
+       }
        mpf_mul_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        mpf_neg(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        return a;
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
+         SvREFCNT_dec(a);
+         croak("Invalid string supplied to Math::GMPf::overload_mul_eq");
+       }
+       mpf_mul(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       mpf_clear(t);
+       return a;
+     }
 
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1704,25 +1728,15 @@ SV * overload_mul_eq(pTHX_ SV * a, SV * b, SV * third) {
        mpf_mul(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
-         SvREFCNT_dec(a);
-         croak("Invalid string supplied to Math::GMPf::overload_mul_eq");
-         }
-       mpf_mul(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
-       mpf_clear(t);
-       return a;
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
        if(strEQ(h, "Math::GMPf")) {
          mpf_mul(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return a;
-         }
        }
+     }
 
      SvREFCNT_dec(a);
      croak("Invalid argument supplied to Math::GMPf::overload_mul_eq");
@@ -1738,29 +1752,39 @@ SV * overload_add_eq(pTHX_ SV * a, SV * b, SV * third) {
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_add_eq");
-         }
+       }
        mpf_add(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
+     }
 #else
      if(SvUOK(b)) {
        mpf_add_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
        return a;
-       }
+     }
 
      if(SvIOK(b)) {
        if(SvIV(b) >= 0) {
          mpf_add_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
-         }
+       }
        mpf_sub_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        return a;
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
+         SvREFCNT_dec(a);
+         croak("Invalid string supplied to Math::GMPf::overload_add_eq");
+       }
+       mpf_add(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       mpf_clear(t);
+       return a;
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1769,25 +1793,15 @@ SV * overload_add_eq(pTHX_ SV * a, SV * b, SV * third) {
        mpf_add(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
-         SvREFCNT_dec(a);
-         croak("Invalid string supplied to Math::GMPf::overload_add_eq");
-         }
-       mpf_add(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
-       mpf_clear(t);
-       return a;
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
        if(strEQ(h, "Math::GMPf")) {
          mpf_add(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return a;
-         }
        }
+     }
 
      SvREFCNT_dec(a);
      croak("Invalid argument supplied to Math::GMPf::overload_add_eq");
@@ -1803,29 +1817,39 @@ SV * overload_sub_eq(pTHX_ SV * a, SV * b, SV * third) {
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_sub_eq");
-         }
+       }
        mpf_sub(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
+     }
 #else
      if(SvUOK(b)) {
        mpf_sub_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
        return a;
-       }
+     }
 
      if(SvIOK(b)) {
        if(SvIV(b) >= 0) {
          mpf_sub_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
-         }
+       }
        mpf_add_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        return a;
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
+         SvREFCNT_dec(a);
+         croak("Invalid string supplied to Math::GMPf::overload_sub_eq");
+       }
+       mpf_sub(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       mpf_clear(t);
+       return a;
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1834,25 +1858,15 @@ SV * overload_sub_eq(pTHX_ SV * a, SV * b, SV * third) {
        mpf_sub(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
-         SvREFCNT_dec(a);
-         croak("Invalid string supplied to Math::GMPf::overload_sub_eq");
-         }
-       mpf_sub(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
-       mpf_clear(t);
-       return a;
-       }
+     }
 
      if(sv_isobject(b)) {
        const char *h = HvNAME(SvSTASH(SvRV(b)));
        if(strEQ(h, "Math::GMPf")) {
          mpf_sub(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return a;
-         }
        }
+     }
 
      SvREFCNT_dec(a);
      croak("Invalid argument supplied to Math::GMPf::overload_sub_eq function");
@@ -1869,30 +1883,40 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_div_eq");
-         }
+       }
        mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
+     }
 #else
      if(SvUOK(b)) {
        mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
        return a;
-       }
+     }
 
      if(SvIOK(b)) {
        if(SvIV(b) >= 0) {
          mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
-         }
+       }
        mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        mpf_neg(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        return a;
-       }
+     }
 #endif
 
+     if(SvPOK(b)) {
+       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
+         SvREFCNT_dec(a);
+         croak("Invalid string supplied to Math::GMPf::overload_div_eq");
+       }
+       mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       mpf_clear(t);
+       return a;
+     }
+
      if(SvNOK(b)) {
-#ifdef USE_LONG_DOUBLE
+#ifdef NV_IS_LONG_DOUBLE
        mpf_init(t);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -1901,25 +1925,15 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
        mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
        mpf_clear(t);
        return a;
-       }
-
-     if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
-         SvREFCNT_dec(a);
-         croak("Invalid string supplied to Math::GMPf::overload_div_eq");
-         }
-       mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
-       mpf_clear(t);
-       return a;
-       }
+     }
 
      if(sv_isobject(b)) {
        const char * h = HvNAME(SvSTASH(SvRV(b)));
        if(strEQ(h, "Math::GMPf")) {
          mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return a;
-         }
        }
+     }
 
      SvREFCNT_dec(a);
      croak("Invalid argument supplied to Math::GMPf::overload_div_eq function");
@@ -1992,13 +2006,13 @@ SV * wrap_gmp_printf(pTHX_ SV * a, SV * b) {
        fflush(stdout);
        return newSViv(ret);
      }
-     if(SvNOK(b)) {
-       ret = gmp_printf(SvPV_nolen(a), SvNVX(b));
+     if(SvPOK(b)) {
+       ret = gmp_printf(SvPV_nolen(a), SvPV_nolen(b));
        fflush(stdout);
        return newSViv(ret);
      }
-     if(SvPOK(b)) {
-       ret = gmp_printf(SvPV_nolen(a), SvPV_nolen(b));
+     if(SvNOK(b)) {
+       ret = gmp_printf(SvPV_nolen(a), SvNVX(b));
        fflush(stdout);
        return newSViv(ret);
      }
@@ -2043,13 +2057,13 @@ SV * wrap_gmp_fprintf(pTHX_ FILE * stream, SV * a, SV * b) {
        fflush(stream);
        return newSViv(ret);
      }
-     if(SvNOK(b)) {
-       ret = gmp_fprintf(stream, SvPV_nolen(a), SvNVX(b));
+     if(SvPOK(b)) {
+       ret = gmp_fprintf(stream, SvPV_nolen(a), SvPV_nolen(b));
        fflush(stream);
        return newSViv(ret);
      }
-     if(SvPOK(b)) {
-       ret = gmp_fprintf(stream, SvPV_nolen(a), SvPV_nolen(b));
+     if(SvNOK(b)) {
+       ret = gmp_fprintf(stream, SvPV_nolen(a), SvNVX(b));
        fflush(stream);
        return newSViv(ret);
      }
@@ -2107,15 +2121,15 @@ SV * wrap_gmp_sprintf(pTHX_ SV * s, SV * a, SV * b, int buflen) {
        return newSViv(ret);
      }
 
-     if(SvNOK(b)) {
-       ret = gmp_sprintf(stream, SvPV_nolen(a), SvNVX(b));
+     if(SvPOK(b)) {
+       ret = gmp_sprintf(stream, SvPV_nolen(a), SvPV_nolen(b));
        sv_setpv(s, stream);
        Safefree(stream);
        return newSViv(ret);
      }
 
-     if(SvPOK(b)) {
-       ret = gmp_sprintf(stream, SvPV_nolen(a), SvPV_nolen(b));
+     if(SvNOK(b)) {
+       ret = gmp_sprintf(stream, SvPV_nolen(a), SvNVX(b));
        sv_setpv(s, stream);
        Safefree(stream);
        return newSViv(ret);
@@ -2174,15 +2188,15 @@ SV * wrap_gmp_snprintf(pTHX_ SV * s, SV * bytes, SV * a, SV * b, int buflen) {
        return newSViv(ret);
      }
 
-     if(SvNOK(b)) {
-       ret = gmp_snprintf(stream, (size_t)SvUV(bytes), SvPV_nolen(a), SvNVX(b));
+     if(SvPOK(b)) {
+       ret = gmp_snprintf(stream, (size_t)SvUV(bytes), SvPV_nolen(a), SvPV_nolen(b));
        sv_setpv(s, stream);
        Safefree(stream);
        return newSViv(ret);
      }
 
-     if(SvPOK(b)) {
-       ret = gmp_snprintf(stream, (size_t)SvUV(bytes), SvPV_nolen(a), SvPV_nolen(b));
+     if(SvNOK(b)) {
+       ret = gmp_snprintf(stream, (size_t)SvUV(bytes), SvPV_nolen(a), SvNVX(b));
        sv_setpv(s, stream);
        Safefree(stream);
        return newSViv(ret);
@@ -2194,8 +2208,8 @@ SV * wrap_gmp_snprintf(pTHX_ SV * s, SV * bytes, SV * a, SV * b, int buflen) {
 int _itsa(pTHX_ SV * a) {
      if(SvUOK(a)) return 1;
      if(SvIOK(a)) return 2;
-     if(SvNOK(a)) return 3;
      if(SvPOK(a)) return 4;
+     if(SvNOK(a)) return 3;
      if(sv_isobject(a)) {
        const char *h = HvNAME(SvSTASH(SvRV(a)));
        if(strEQ(h, "Math::GMPf")) return 6;
@@ -2213,7 +2227,7 @@ int _has_longlong(void) {
 }
 
 int _has_longdouble(void) {
-#ifdef USE_LONG_DOUBLE
+#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
     return 1;
 #else
     return 0;
@@ -2306,10 +2320,52 @@ SV * _GMP_NAIL_BITS(pTHX) {
      return &PL_sv_undef;
 #endif
 }
+
+int _nv_is_float128(void) {
+#if defined(NV_IS_FLOAT128)
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+int _SvNOK(pTHX_ SV * in) {
+  if(SvNOK(in)) return 1;
+  return 0;
+}
+
+int _SvPOK(pTHX_ SV * in) {
+  if(SvPOK(in)) return 1;
+  return 0;
+}
+
+int nok_pokflag(void) {
+  return nok_pok;
+}
+
+void clear_nok_pok(void){
+  nok_pok = 0;
+}
+
+void set_nok_pok(int x) {
+  nok_pok = x;
+}
+
 MODULE = Math::GMPf  PACKAGE = Math::GMPf
 
 PROTOTYPES: DISABLE
 
+
+int
+NOK_POK_val ()
+CODE:
+  RETVAL = NOK_POK_val (aTHX);
+OUTPUT:  RETVAL
+
+
+int
+_win32_infnanstring (s)
+	char *	s
 
 unsigned long
 Rmpf_get_default_prec ()
@@ -3654,4 +3710,58 @@ CODE:
   RETVAL = _GMP_NAIL_BITS (aTHX);
 OUTPUT:  RETVAL
 
+
+int
+_nv_is_float128 ()
+
+
+int
+_SvNOK (in)
+	SV *	in
+CODE:
+  RETVAL = _SvNOK (aTHX_ in);
+OUTPUT:  RETVAL
+
+int
+_SvPOK (in)
+	SV *	in
+CODE:
+  RETVAL = _SvPOK (aTHX_ in);
+OUTPUT:  RETVAL
+
+int
+nok_pokflag ()
+
+
+void
+clear_nok_pok ()
+
+        PREINIT:
+        I32* temp;
+        PPCODE:
+        temp = PL_markstack_ptr++;
+        clear_nok_pok();
+        if (PL_markstack_ptr != temp) {
+          /* truly void, because dXSARGS not invoked */
+          PL_markstack_ptr = temp;
+          XSRETURN_EMPTY; /* return empty stack */
+        }
+        /* must have used dXSARGS; list context implied */
+        return; /* assume stack size is correct */
+
+void
+set_nok_pok (x)
+	int	x
+        PREINIT:
+        I32* temp;
+        PPCODE:
+        temp = PL_markstack_ptr++;
+        set_nok_pok(x);
+        if (PL_markstack_ptr != temp) {
+          /* truly void, because dXSARGS not invoked */
+          PL_markstack_ptr = temp;
+          XSRETURN_EMPTY; /* return empty stack */
+        }
+        /* must have used dXSARGS; list context implied */
+        return; /* assume stack size is correct */
 
