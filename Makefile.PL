@@ -31,21 +31,25 @@ else {
 
 if($use_long_double == -1) {}
 elsif($use_long_double == 1) {$defines .= " -DUSE_LONG_DOUBLE"}
-else {
-  if($Config::Config{nvsize} > 8 ) {
-    $defines .= " -DUSE_LONG_DOUBLE";
-  }
+elsif($Config::Config{nvsize} > 8 ) {
+  $defines .= " -DNV_IS_FLOAT128" if $Config{nvtype} eq '__float128';
+  $defines .= " -DNV_IS_LONG_DOUBLE" if $Config{nvtype} eq 'long double';
 }
+else {$defines .= " -DNV_IS_DOUBLE" if $Config{nvtype} eq 'double'}
 
 $defines =~ /-DMATH_GMPF_NEED_LONG_LONG_INT/ ? print "Building with 64-bit'long long' support\n" :
                                  print "Building without 64-bit 'long long' support\n";
 
 print "If this is wrong, see the \"64-bit support\" section in the README\n\n";
 
-$defines =~ /-DUSE_LONG_DOUBLE/ ? print "Building with 'long double' support\n" :
+$defines =~ /-DNV_IS_LONG_DOUBLE/ ? print "Building with 'long double' support\n" :
                                  print "Building without 'long double' support\n";
 
 print "If this is wrong, see the \"64-bit support\" section in the README\n\n";
+
+if($^O =~ /MSWin32/i && $] < 5.022) {
+  $defines .= " -D_WIN32_BIZARRE_INFNAN";
+}
 
 my %options = (
   NAME => 'Math::GMPf',
