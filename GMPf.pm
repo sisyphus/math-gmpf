@@ -75,6 +75,7 @@ fgmp_randinit_default fgmp_randinit_mt fgmp_randinit_lc_2exp fgmp_randinit_lc_2e
 fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
+Rmpf_get_NV Rmpf_set_NV
     );
     our $VERSION = '0.42';
     #$VERSION = eval $VERSION;
@@ -108,7 +109,11 @@ fgmp_randinit_default fgmp_randinit_mt fgmp_randinit_lc_2exp fgmp_randinit_lc_2e
 fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
+Rmpf_get_NV Rmpf_set_NV
 )]);
+
+$Math::GMPf::NOK_POK = 0; # Set to 1 to allow warnings in new() and overloaded operations when
+                          # a scalar that has set both NOK (NV) and POK (PV) flags is encountered
 
 sub dl_load_flags {0} # Prevent DynaLoader from complaining and croaking
 
@@ -157,6 +162,13 @@ sub new {
       return Rmpf_init_set_str($arg1, 10);
     }
 
+    if($type == _POK_T) {
+      if(@_ > 1) {die "Too many arguments supplied to new() - expected no more than two"}
+      $base = shift if @_;
+      if(($base < 2 && $base > -2) || $base < -62 || $base > 62) {die "Invalid value for base"}
+      return Rmpf_init_set_str($arg1, $base);
+    }
+
     if($type == _NOK_T) {
       if(@_ ) {die "Too many arguments supplied to new() - expected only one"}
       if(Math::GMPf::_has_longdouble()) {
@@ -166,13 +178,6 @@ sub new {
       }
       return Rmpf_init_set_d($arg1);
 
-    }
-
-    if($type == _POK_T) {
-      if(@_ > 1) {die "Too many arguments supplied to new() - expected no more than two"}
-      $base = shift if @_;
-      if(($base < 2 && $base > -2) || $base < -62 || $base > 62) {die "Invalid value for base"}
-      return Rmpf_init_set_str($arg1, $base);
     }
 
     if($type == _MATH_GMPf_T) {
@@ -541,6 +546,7 @@ __END__
    Rmpf_set_ui($rop, $ui);
    Rmpf_set_si($rop, $si);
    Rmpf_set_d($rop, $double);
+   Rmpf_set_NV($rop, $NV); # $NV is $Config{nvtype}
    Rmpf_set_z($rop, $z); # $z is a Math::GMPz object.
    Rmpf_set_q($rop, $q); # $q is a Math::GMPq object.
     Set the value of $rop from the 2nd arg.
@@ -615,6 +621,9 @@ __END__
 
    $double = Rmpf_get_d($op);
     Convert $op to a 'double'.
+
+   $NV = Rmpf_get_d($op); # $NV is $Config{nvtype}
+    Convert $op to an NV.
 
    $si = Rmpf_get_si($op);
    $ui = Rmpf_get_ui($op);
@@ -791,6 +800,21 @@ __END__
    $bool = Rmpf_fits_sshort_p($op);
     Return non-zero if OP would fit in the respective C data
     type, when truncated to an integer.
+
+   $iv = Math::GMPf::nok_pokflag(); # not exported
+    Returns the value of the nok_pok flag. This flag is
+    initialized to zero, but incemented by 1 whenever a
+    scalar that is both a float (NOK) and string (POK) is passed
+    to new() or to an overloaded operator. The value of the flag
+    therefore tells us how many times such events occurred . The
+    flag can be reset to 0 by running clear_nok_pok().
+
+   Math::GMPf::set_nok_pok($iv); # not exported
+    Resets the nok_pok flag to the value specified by $iv.
+
+   Math::GMPf::clear_nok_pok(); # not exported
+    Resets the nok_pok flag to 0.(Essentially the same
+    as running set_nok_pok(0).)
 
    #######################
 
