@@ -217,20 +217,34 @@ SV * Rmpf_init_set_d(pTHX_ double a) {
 
 void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
 #if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
-     char buffer[50];
+     char * buffer;
      int exp, exp2 = 0;
-     long double fr;
+     long double fr, buffer_size;
 
-     fr = frexpl((long double)SvNV(p), &exp);
+     fr = (long double)SvNV(p);
+
+     if(fr != fr)
+       croak("In _Rmpf_set_ld, cannot coerce a NaN to a Math::GMPf object");
+     if(fr != 0.0L && (fr / fr != 1))
+       croak("In _Rmpf_set_ld, cannot coerce an Inf to a Math::GMPf object");
+
+     fr = frexpl(fr, &exp);
 
      while(fr != floorl(fr)) {
           fr *= 2;
           exp2 += 1;
      }
 
+     buffer_size = fr < 0.0L ? fr * -1.0L : fr;
+     buffer_size = ceill(logl(buffer_size + 1) / 2.30258509299404568401799145468436418L);
+
+     Newxz(buffer, buffer_size + 5, char);
+
      sprintf(buffer, "%.0Lf", fr);
 
      mpf_set_str(*q, buffer, 10);
+
+     Safefree(buffer);
 
      if (exp2 > exp) mpf_div_2exp(*q, *q, exp2 - exp);
      else mpf_mul_2exp(*q, *q, exp - exp2);
@@ -370,6 +384,12 @@ void Rmpf_set_si(mpf_t * p, long l) {
 }
 
 void Rmpf_set_d(mpf_t * p, double d) {
+
+     if(d != d)
+       croak("In Rmpf_set_d, cannot coerce a NaN to a Math::GMPf object");
+     if(d != 0 && (d / d != 1))
+       croak("In Rmpf_set_d, cannot coerce an Inf to a Math::GMPf object");
+
      mpf_set_d(*p, d);
 }
 
@@ -2351,6 +2371,263 @@ void set_nok_pok(int x) {
   nok_pok = x;
 }
 
+SV * _Rmpf_get_float128(mpf_t * x) {
+
+#if defined(NV_IS_FLOAT128)
+     mpf_t t;
+     long i, exp, retract = 0;
+     char *out;
+     float128 ret = 0.0Q, sign = 1.0Q;
+     float128 add_on[113] = {
+      5192296858534827628530496329220096e0Q, 2596148429267413814265248164610048e0Q,
+      1298074214633706907132624082305024e0Q, 649037107316853453566312041152512e0Q,
+      324518553658426726783156020576256e0Q, 162259276829213363391578010288128e0Q,
+      81129638414606681695789005144064e0Q, 40564819207303340847894502572032e0Q,
+      20282409603651670423947251286016e0Q, 10141204801825835211973625643008e0Q,
+      5070602400912917605986812821504e0Q, 2535301200456458802993406410752e0Q,
+      1267650600228229401496703205376e0Q, 633825300114114700748351602688e0Q,
+      316912650057057350374175801344e0Q, 158456325028528675187087900672e0Q, 79228162514264337593543950336e0Q,
+      39614081257132168796771975168e0Q, 19807040628566084398385987584e0Q, 9903520314283042199192993792e0Q,
+      4951760157141521099596496896e0Q, 2475880078570760549798248448e0Q, 1237940039285380274899124224e0Q,
+      618970019642690137449562112e0Q, 309485009821345068724781056e0Q, 154742504910672534362390528e0Q,
+      77371252455336267181195264e0Q, 38685626227668133590597632e0Q, 19342813113834066795298816e0Q,
+      9671406556917033397649408e0Q, 4835703278458516698824704e0Q, 2417851639229258349412352e0Q,
+      1208925819614629174706176e0Q, 604462909807314587353088e0Q, 302231454903657293676544e0Q,
+      151115727451828646838272e0Q, 75557863725914323419136e0Q, 37778931862957161709568e0Q,
+      18889465931478580854784e0Q, 9444732965739290427392e0Q, 4722366482869645213696e0Q,
+      2361183241434822606848e0Q, 1180591620717411303424e0Q, 590295810358705651712e0Q, 295147905179352825856e0Q,
+      147573952589676412928e0Q, 73786976294838206464e0Q, 36893488147419103232e0Q, 18446744073709551616e0Q,
+      9223372036854775808e0Q, 4611686018427387904e0Q, 2305843009213693952e0Q, 1152921504606846976e0Q,
+      576460752303423488e0Q, 288230376151711744e0Q, 144115188075855872e0Q, 72057594037927936e0Q,
+      36028797018963968e0Q, 18014398509481984e0Q, 9007199254740992e0Q, 4503599627370496e0Q,
+      2251799813685248e0Q, 1125899906842624e0Q, 562949953421312e0Q, 281474976710656e0Q, 140737488355328e0Q,
+      70368744177664e0Q, 35184372088832e0Q, 17592186044416e0Q, 8796093022208e0Q, 4398046511104e0Q,
+      2199023255552e0Q, 1099511627776e0Q, 549755813888e0Q, 274877906944e0Q, 137438953472e0Q, 68719476736e0Q,
+      34359738368e0Q, 17179869184e0Q, 8589934592e0Q, 4294967296e0Q, 2147483648e0Q, 1073741824e0Q, 536870912e0Q,
+      268435456e0Q, 134217728e0Q, 67108864e0Q, 33554432e0Q, 16777216e0Q, 8388608e0Q, 4194304e0Q, 2097152e0Q,
+      1048576e0Q, 524288e0Q, 262144e0Q, 131072e0Q, 65536e0Q, 32768e0Q, 16384e0Q, 8192e0Q, 4096e0Q, 2048e0Q,
+      1024e0Q, 512e0Q, 256e0Q, 128e0Q, 64e0Q, 32e0Q, 16e0Q, 8e0Q, 4e0Q, 2e0Q, 1e0Q };
+
+     mpf_init2(t, 113);
+     mpf_set(t, *x);
+
+     Newxz(out, 115, char);
+     if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_float128 function");
+
+     mpf_get_str(out, &exp, 2, 113, t);
+
+     mpf_clear(t);
+
+     if(out[0] == '-') {
+       sign = -1.0Q;
+       out++;
+       retract++;
+     }
+     else {
+       if(out[0] == '+') {
+         out++;
+         retract++;
+       }
+     }
+
+     for(i = 0; i < 113; i++) {
+       if(out[i] == '1') ret += add_on[i];
+     }
+
+     if(retract) out--;
+     Safefree(out);
+
+     if(exp > 113) {
+       retract = exp - 113; /* re-using 'retract' */
+       for(i = 0; i < retract; i++) ret *= 2.0Q;
+     }
+
+     if(exp < 113) {
+       for(i = exp; i < 113; i++) ret /= 2.0Q;
+     }
+
+     return newSVnv(ret * sign);
+
+#else
+
+     croak("_Rmpf_get_float128 not implemented for this build of Math::GMPf");
+
+#endif
+
+}
+
+SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
+
+#if defined(NV_IS_LONG_DOUBLE)
+#if REQUIRED_LDBL_MANT_DIG == 2098
+
+     croak("_Rmpf_get_ld not yet implemented on double-double builds of perl");
+
+#else
+     mpf_t t;
+     long i, exp, retract = 0;
+     char *out;
+     long double ret = 0.0L, sign = 1.0L;
+     long double add_on[113] = {
+      5192296858534827628530496329220096e0L, 2596148429267413814265248164610048e0L,
+      1298074214633706907132624082305024e0L, 649037107316853453566312041152512e0L,
+      324518553658426726783156020576256e0L, 162259276829213363391578010288128e0L,
+      81129638414606681695789005144064e0L, 40564819207303340847894502572032e0L,
+      20282409603651670423947251286016e0L, 10141204801825835211973625643008e0L,
+      5070602400912917605986812821504e0L, 2535301200456458802993406410752e0L,
+      1267650600228229401496703205376e0L, 633825300114114700748351602688e0L,
+      316912650057057350374175801344e0L, 158456325028528675187087900672e0L, 79228162514264337593543950336e0L,
+      39614081257132168796771975168e0L, 19807040628566084398385987584e0L, 9903520314283042199192993792e0L,
+      4951760157141521099596496896e0L, 2475880078570760549798248448e0L, 1237940039285380274899124224e0L,
+      618970019642690137449562112e0L, 309485009821345068724781056e0L, 154742504910672534362390528e0L,
+      77371252455336267181195264e0L, 38685626227668133590597632e0L, 19342813113834066795298816e0L,
+      9671406556917033397649408e0L, 4835703278458516698824704e0L, 2417851639229258349412352e0L,
+      1208925819614629174706176e0L, 604462909807314587353088e0L, 302231454903657293676544e0L,
+      151115727451828646838272e0L, 75557863725914323419136e0L, 37778931862957161709568e0L,
+      18889465931478580854784e0L, 9444732965739290427392e0L, 4722366482869645213696e0L,
+      2361183241434822606848e0L, 1180591620717411303424e0L, 590295810358705651712e0L, 295147905179352825856e0L,
+      147573952589676412928e0L, 73786976294838206464e0L, 36893488147419103232e0L, 18446744073709551616e0L,
+      9223372036854775808e0L, 4611686018427387904e0L, 2305843009213693952e0L, 1152921504606846976e0L,
+      576460752303423488e0L, 288230376151711744e0L, 144115188075855872e0L, 72057594037927936e0L,
+      36028797018963968e0L, 18014398509481984e0L, 9007199254740992e0L, 4503599627370496e0L,
+      2251799813685248e0L, 1125899906842624e0L, 562949953421312e0L, 281474976710656e0L, 140737488355328e0L,
+      70368744177664e0L, 35184372088832e0L, 17592186044416e0L, 8796093022208e0L, 4398046511104e0L,
+      2199023255552e0L, 1099511627776e0L, 549755813888e0L, 274877906944e0L, 137438953472e0L, 68719476736e0L,
+      34359738368e0L, 17179869184e0L, 8589934592e0L, 4294967296e0L, 2147483648e0L, 1073741824e0L, 536870912e0L,
+      268435456e0L, 134217728e0L, 67108864e0L, 33554432e0L, 16777216e0L, 8388608e0L, 4194304e0L, 2097152e0L,
+      1048576e0L, 524288e0L, 262144e0L, 131072e0L, 65536e0L, 32768e0L, 16384e0L, 8192e0L, 4096e0L, 2048e0L,
+      1024e0L, 512e0L, 256e0L, 128e0L, 64e0L, 32e0L, 16e0L, 8e0L, 4e0L, 2e0L, 1e0L };
+
+     mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
+     mpf_set(t, *x);
+
+     Newxz(out, REQUIRED_LDBL_MANT_DIG + 2, char);
+     if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
+
+     mpf_get_str(out, &exp, 2, REQUIRED_LDBL_MANT_DIG, t);
+
+     mpf_clear(t);
+
+     if(out[0] == '-') {
+       sign = -1.0L;
+       out++;
+       retract++;
+     }
+     else {
+       if(out[0] == '+') {
+         out++;
+         retract++;
+       }
+     }
+
+     for(i = 0; i < 113; i++) {
+       if(out[i] == '1') ret += add_on[i];
+     }
+
+     if(retract) out--;
+     Safefree(out);
+
+     if(exp > 113) {
+       retract = exp - 113; /* re-using 'retract' */
+       for(i = 0; i < retract; i++) ret *= 2.0L;
+     }
+
+     if(exp < 113) {
+       for(i = exp; i < 113; i++) ret /= 2.0L;
+     }
+
+     return newSVnv(ret * sign);
+
+#endif
+#else
+
+     croak("_Rmpf_get_ld not implemented for this build of Math::GMPf");
+
+#endif
+
+}
+
+SV * Rmpf_get_NV(pTHX_ mpf_t * x) {
+
+#if defined(NV_IS_FLOAT128)
+
+     return _Rmpf_get_float128(x);
+
+#elif defined(NV_IS_LONG_DOUBLE)
+
+     return _Rmpf_get_ld(aTHX_ x);
+
+#else
+
+     return newSVnv(mpf_get_d(*x));
+
+#endif
+
+}
+
+void _Rmpf_set_float128(pTHX_ mpf_t *q, SV * p) {
+
+#if defined(NV_IS_FLOAT128)
+
+     char * buffer;
+     int exp, exp2 = 0, returned;
+     float128 fr, buffer_size;
+
+     fr = (float128)SvNV(p);
+
+     if(fr != fr)
+       croak("In _Rmpf_set_float128, cannot coerce a NaN to a Math::GMPf object");
+     if(fr != 0.0Q && (fr / fr != 1))
+       croak("In _Rmpf_set_float128, cannot coerce an Inf to a Math::GMPf object");
+
+     fr = frexpq(fr, &exp);
+
+     while(fr != floorq(fr)) {
+          fr *= 2;
+          exp2 += 1;
+     }
+
+     buffer_size = fr < 0.0Q ? fr * -1.0Q : fr;
+     buffer_size = ceilq(logq(buffer_size + 1) / 2.30258509299404568401799145468436418Q);
+
+     Newxz(buffer, buffer_size + 5, char);
+
+     returned = quadmath_snprintf(buffer, (size_t)buffer_size + 5, "%.0Qf", fr);
+     if(returned < 0) croak("In _Rmpf_set_float128, encoding error in quadmath_snprintf function");
+     if(returned >= buffer_size + 5) croak("In _Rmpf_set_float128, buffer given to quadmath_snprintf function was too small");
+
+     mpf_set_str(*q, buffer, 10);
+
+     Safefree(buffer);
+
+     if (exp2 > exp) mpf_div_2exp(*q, *q, exp2 - exp);
+     else mpf_mul_2exp(*q, *q, exp - exp2);
+
+#else
+
+     croak("_Rmpf_set_float128 not implemented on this build of perl");
+
+#endif
+
+}
+
+void Rmpf_set_NV(pTHX_ mpf_t *q, SV * p) {
+
+#if defined(NV_IS_FLOAT128)
+
+     _Rmpf_set_float128(aTHX_ q, p);
+
+#elif defined(NV_IS_LONG_DOUBLE)
+
+     _Rmpf_set_ld(aTHX_ q, p);
+
+#else
+
+     mpf_set_d(*q, (double)SvNV(p));
+
+#endif
+
+}
 MODULE = Math::GMPf  PACKAGE = Math::GMPf
 
 PROTOTYPES: DISABLE
@@ -3757,6 +4034,58 @@ set_nok_pok (x)
         PPCODE:
         temp = PL_markstack_ptr++;
         set_nok_pok(x);
+        if (PL_markstack_ptr != temp) {
+          /* truly void, because dXSARGS not invoked */
+          PL_markstack_ptr = temp;
+          XSRETURN_EMPTY; /* return empty stack */
+        }
+        /* must have used dXSARGS; list context implied */
+        return; /* assume stack size is correct */
+
+SV *
+_Rmpf_get_float128 (x)
+	mpf_t *	x
+
+SV *
+_Rmpf_get_ld (x)
+	mpf_t *	x
+CODE:
+  RETVAL = _Rmpf_get_ld (aTHX_ x);
+OUTPUT:  RETVAL
+
+SV *
+Rmpf_get_NV (x)
+	mpf_t *	x
+CODE:
+  RETVAL = Rmpf_get_NV (aTHX_ x);
+OUTPUT:  RETVAL
+
+void
+_Rmpf_set_float128 (q, p)
+	mpf_t *	q
+	SV *	p
+        PREINIT:
+        I32* temp;
+        PPCODE:
+        temp = PL_markstack_ptr++;
+        _Rmpf_set_float128(aTHX_ q, p);
+        if (PL_markstack_ptr != temp) {
+          /* truly void, because dXSARGS not invoked */
+          PL_markstack_ptr = temp;
+          XSRETURN_EMPTY; /* return empty stack */
+        }
+        /* must have used dXSARGS; list context implied */
+        return; /* assume stack size is correct */
+
+void
+Rmpf_set_NV (q, p)
+	mpf_t *	q
+	SV *	p
+        PREINIT:
+        I32* temp;
+        PPCODE:
+        temp = PL_markstack_ptr++;
+        Rmpf_set_NV(aTHX_ q, p);
         if (PL_markstack_ptr != temp) {
           /* truly void, because dXSARGS not invoked */
           PL_markstack_ptr = temp;
