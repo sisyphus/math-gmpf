@@ -1,5 +1,6 @@
     package Math::GMPf;
     use strict;
+    use warnings;
     use Math::GMPf::Random;
     require Exporter;
     *import = \&Exporter::import;
@@ -164,6 +165,12 @@ sub new {
 
     if($type == _POK_T) {
       if(@_ > 1) {die "Too many arguments supplied to new() - expected no more than two"}
+      if(_SvNOK($arg1)) {
+        set_nok_pok(nok_pokflag() + 1);
+        if($Math::GMPf::NOK_POK) {
+          warn "Scalar passed to new() is both NV and PV. Using PV (string) value";
+        }
+      }
       $base = shift if @_;
       if(($base < 2 && $base > -2) || $base < -62 || $base > 62) {die "Invalid value for base"}
       return Rmpf_init_set_str($arg1, $base);
@@ -177,7 +184,6 @@ sub new {
         return $ret;
       }
       return Rmpf_init_set_d($arg1);
-
     }
 
     if($type == _MATH_GMPf_T) {
