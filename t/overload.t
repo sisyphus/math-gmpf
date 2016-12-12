@@ -3,7 +3,7 @@ use warnings;
 use Math::GMPf qw(:mpf);
 use Math::BigInt; # for some error checking
 
-print "1..42\n";
+print "1..101\n";
 
 print "# Using gmp version ", Math::GMPf::gmp_v(), "\n";
 
@@ -749,5 +749,407 @@ else {
   print "not ok 42\n";
 }
 
+my $inf = 999**(999**999);
+my $infstring = "$inf";
+my $ninf = $inf * -1;
+my $ninfstring = "$ninf";
+my $nan = $inf / $inf;
+my $nanstring = "$nan";
+my $nan_skip = 0;
+Rmpf_set_d($mpf1, 0.0);
 
+$nan_skip = 1 if $nan == $nan;
 
+if($mpf1 == $inf) {
+  warn "\n $mpf1 == $inf\n";
+  print "not ok 43\n";
+}
+else {print "ok 43\n"}
+
+if($mpf1 == $ninf) {
+  warn "\n $mpf1 == $ninf\n";
+  print "not ok 44\n";
+}
+else {print "ok 44\n"}
+
+if($mpf1 == $infstring) {
+  warn "\n $mpf1 == $infstring\n";
+  print "not ok 45\n";
+}
+else {print "ok 45\n"}
+
+if($mpf1 == $ninfstring) {
+  warn "\n $mpf1 == $ninfstring\n";
+  print "not ok 46\n";
+}
+else {print "ok 46\n"}
+
+#######################
+
+if($mpf1 != $inf) {print "ok 47\n"}
+else {
+  warn "\n $mpf1 == $inf\n";
+  print "not ok 47\n";
+}
+
+if($mpf1 != $ninf) {print "ok 48\n"}
+else {
+  warn "\n $mpf1 == $ninf\n";
+  print "not ok 48\n";
+}
+
+if($mpf1 != $infstring) {print "ok 49\n"}
+else {
+  warn "\n $mpf1 == $infstring\n";
+  print "not ok 49\n";
+}
+
+if($mpf1 != $ninfstring) {print "ok 50\n"}
+else {
+  warn "\n $mpf1 == $ninfstring\n";
+  print "not ok 50\n";
+}
+
+########################
+
+if($mpf1 > $inf) {
+  warn "\n $mpf1 > $inf\n";
+  print "not ok 51\n";
+}
+else {print "ok 51\n"}
+
+if($mpf1 < $ninf) {
+  warn "\n $mpf1 < $ninf\n";
+  print "not ok 52\n";
+}
+else {print "ok 52\n"}
+
+if($mpf1 > $infstring) {
+  warn "\n $mpf1 > $infstring\n";
+  print "not ok 53\n";
+}
+else {print "ok 53\n"}
+
+if($mpf1 < $ninfstring) {
+  warn "\n $mpf1 < $ninfstring\n";
+  print "not ok 54\n";
+}
+else {print "ok 54\n"}
+
+#########################
+
+if($mpf1 < $inf) {print "ok 55\n"}
+else {
+  warn "\n $mpf1 >= $inf\n";
+  print "not ok 55\n";
+}
+
+if($mpf1 > $ninf) {print "ok 56\n"}
+else {
+  warn "\n $mpf1 <= $ninf\n";
+  print "not ok 56\n";
+}
+
+if($mpf1 < $infstring) {print "ok 57\n"}
+else {
+  warn "\n $mpf1 >= $infstring\n";
+  print "not ok 57\n";
+}
+
+if($mpf1 > $ninfstring) {print "ok 58\n"}
+else {
+  warn "\n $mpf1 <= $ninfstring\n";
+  print "not ok 58\n";
+}
+
+########################
+
+if($mpf1 >= $inf) {
+  warn "\n $mpf1 >= $inf\n";
+  print "not ok 59\n";
+}
+else {print "ok 59\n"}
+
+if($mpf1 <= $ninf) {
+  warn "\n $mpf1 <= $ninf\n";
+  print "not ok 60\n";
+}
+else {print "ok 60\n"}
+
+if($mpf1 >= $infstring) {
+  warn "\n $mpf1 >= $infstring\n";
+  print "not ok 61\n";
+}
+else {print "ok 61\n"}
+
+if($mpf1 <= $ninfstring) {
+  warn "\n $mpf1 <= $ninfstring\n";
+  print "not ok 62\n";
+}
+else {print "ok 62\n"}
+
+#########################
+
+if($mpf1 <= $inf) {print "ok 63\n"}
+else {
+  warn "\n $mpf1 > $inf\n";
+  print "not ok 63\n";
+}
+
+if($mpf1 >= $ninf) {print "ok 64\n"}
+else {
+  warn "\n $mpf1 < $ninf\n";
+  print "not ok 64\n";
+}
+
+if($mpf1 <= $infstring) {print "ok 65\n"}
+else {
+  warn "\n $mpf1 > $infstring\n";
+  print "not ok 65\n";
+}
+
+if($mpf1 >= $ninfstring) {print "ok 66\n"}
+else {
+  warn "\n $mpf1 < $ninfstring\n";
+  print "not ok 66\n";
+}
+
+###########################
+###########################
+
+if($inf == $mpf1) {
+  warn "\n $inf == $mpf1\n";
+  print "not ok 67\n";
+}
+else {print "ok 67\n"}
+
+if($ninf == $mpf1) {
+  warn "\n $ninf == $mpf1\n";
+  print "not ok 68\n";
+}
+else {print "ok 68\n"}
+
+if($infstring == $mpf1) {
+  warn "\n $infstring == $mpf1\n";
+  print "not ok 69\n";
+}
+else {print "ok 69\n"}
+
+if($ninfstring == $mpf1) {
+  warn "\n $ninfstring == $mpf1\n";
+  print "not ok 70\n";
+}
+else {print "ok 70\n"}
+
+#######################
+
+if($inf != $mpf1) {print "ok 71\n"}
+else {
+  warn "\n $inf == $mpf1\n";
+  print "not ok 71\n";
+}
+
+if($ninf != $mpf1) {print "ok 72\n"}
+else {
+  warn "\n $ninf == $mpf1\n";
+  print "not ok 72\n";
+}
+
+if($infstring != $mpf1) {print "ok 73\n"}
+else {
+  warn "\n $infstring == $mpf1\n";
+  print "not ok 73\n";
+}
+
+if($ninfstring != $mpf1) {print "ok 74\n"}
+else {
+  warn "\n $ninfstring == $mpf1\n";
+  print "not ok 74\n";
+}
+
+########################
+
+if($inf < $mpf1) {
+  warn "\n $inf < $mpf1\n";
+  print "not ok 75\n";
+}
+else {print "ok 75\n"}
+
+if($ninf > $mpf1) {
+  warn "\n $mpf1 > $ninf\n";
+  print "not ok 76\n";
+}
+else {print "ok 76\n"}
+
+if($infstring < $mpf1) {
+  warn "\n $infstring < $mpf1\n";
+  print "not ok 77\n";
+}
+else {print "ok 77\n"}
+
+if($ninfstring > $mpf1) {
+  warn "\n $ninfstring > $mpf1\n";
+  print "not ok 78\n";
+}
+else {print "ok 78\n"}
+
+#########################
+
+if($inf > $mpf1) {print "ok 79\n"}
+else {
+  warn "\n $inf <= $mpf1\n";
+  print "not ok 79\n";
+}
+
+if($ninf < $mpf1) {print "ok 80\n"}
+else {
+  warn "\n $ninf >= $mpf1\n";
+  print "not ok 80\n";
+}
+
+if($infstring > $mpf1) {print "ok 81\n"}
+else {
+  warn "\n $infstring <= $mpf1\n";
+  print "not ok 81\n";
+}
+
+if($ninfstring < $mpf1) {print "ok 82\n"}
+else {
+  warn "\n $ninfstring >= $mpf1\n";
+  print "not ok 82\n";
+}
+
+########################
+
+if($inf <= $mpf1) {
+  warn "\n $inf <= $mpf1\n";
+  print "not ok 83\n";
+}
+else {print "ok 83\n"}
+
+if($ninf >= $mpf1) {
+  warn "\n $ninf >= $mpf1\n";
+  print "not ok 84\n";
+}
+else {print "ok 84\n"}
+
+if($infstring <= $mpf1) {
+  warn "\n $infstring <= $mpf1\n";
+  print "not ok 85\n";
+}
+else {print "ok 85\n"}
+
+if($ninfstring >= $mpf1) {
+  warn "\n $ninfstring >= $mpf1\n";
+  print "not ok 86\n";
+}
+else {print "ok 86\n"}
+
+#########################
+
+if($inf >= $mpf1) {print "ok 87\n"}
+else {
+  warn "\n $inf < $mpf1\n";
+  print "not ok 87\n";
+}
+
+if($ninf <= $mpf1) {print "ok 88\n"}
+else {
+  warn "\n $ninf > $mpf1\n";
+  print "not ok 88\n";
+}
+
+if($infstring >= $mpf1) {print "ok 89\n"}
+else {
+  warn "\n $infstring < $mpf1\n";
+  print "not ok 89\n";
+}
+
+if($ninfstring <= $mpf1) {print "ok 90\n"}
+else {
+  warn "\n $ninfstring > $mpf1\n";
+  print "not ok 90\n";
+}
+
+###########################
+###########################
+
+if(($mpf1 <=> $inf) < 0) {print "ok 91\n"}
+else {
+  warn "\n ", ($mpf1 <=> $inf), "\n";
+  print "not ok 91\n";
+}
+
+if(($mpf1 <=> $ninf) > 0) {print "ok 92\n"}
+else {
+  warn "\n ", ($mpf1 <=> $ninf), "\n";
+  print "not ok 92\n";
+}
+
+if(($mpf1 <=> $infstring) < 0) {print "ok 93\n"}
+else {
+  warn "\n ",  ($mpf1 <=> $infstring), "\n";
+  print "not ok 93\n";
+}
+
+if(($mpf1 <=> $ninfstring) > 0) {print "ok 94\n"}
+else {
+  warn "\n ",  ($mpf1 <=> $ninfstring), "\n";
+  print "not ok 94\n";
+}
+
+###########################
+
+if(($inf <=> $mpf1) > 0) {print "ok 95\n"}
+else {
+  warn "\n ", ($inf <=> $mpf1), "\n";
+  print "not ok 95\n";
+}
+
+if(($ninf <=> $mpf1) < 0) {print "ok 96\n"}
+else {
+  warn "\n ", ($ninf <=> $mpf1), "\n";
+  print "not ok 96\n";
+}
+
+if(($infstring <=> $mpf1) > 0) {print "ok 97\n"}
+else {
+  warn "\n ", ($infstring <=> $mpf1), "\n";
+  print "not ok 97\n";
+}
+
+if(($ninfstring <=> $mpf1) < 0) {print "ok 98\n"}
+else {
+  warn "\n ", ($ninfstring <=> $mpf1), "\n";
+  print "not ok 98\n";
+}
+
+###########################
+###########################
+
+if(!$nan_skip) {
+  eval {my $r = $mpf1 * $nanstring;};
+  if($@ =~ /^Invalid string supplied to Math::GMPf::overload_mul/) {print "ok 99\n"}
+  else {
+    warn "\n \$\@: $@\n";
+    print "not ok 99\n";
+  }
+
+  eval{my $r = ($mpf1 <=> $nanstring);};
+  if($@ =~ /^Invalid string supplied to Math::GMPf::overload_spaceship/) {print "ok 100\n"}
+  else {
+    warn "\n \$\@: $@\n";
+    print "not ok 100\n";
+  }
+}
+else {
+  warn "\n Skipping NaN handling tests\n";
+  print "ok 99\nok 100\n";
+}
+
+eval{my $r = $mpf1 * $infstring;};
+if($@ =~ /^Invalid string supplied to Math::GMPf::overload_mul/) {print "ok 101\n"}
+else {
+  warn "\n \$\@: $@\n";
+  print "not ok 101\n";
+}
