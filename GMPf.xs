@@ -22,21 +22,8 @@ int NOK_POK_val(pTHX) {
   return SvIV(get_sv("Math::GMPf::NOK_POK", 0));
 }
 
-int _win32_infnanstring(char * s) { /* MS Windows only - detect 1.#INF and 1.#IND
-                                     * Need to do this to correctly handle a scalar
-                                     * that is both NOK and POK on older win32 perls */
-
-  /*************************************
-  * if input string    =~ /^\-1\.#INF$/ return -1
-  * elsif input string =~ /^\+?1\.#INF$/i return 1
-  * elsif input string =~ /^(\-|\+)?1\.#IND$/i return 2
-  * else return 0
-  **************************************/
-
-#ifdef _WIN32_BIZARRE_INFNAN
-
+int _is_infstring(char * s) {
   int sign = 1;
-  int factor = 1;
 
   if(s[0] == '-') {
     sign = -1;
@@ -46,13 +33,16 @@ int _win32_infnanstring(char * s) { /* MS Windows only - detect 1.#INF and 1.#IN
     if(s[0] == '+') s++;
   }
 
-  if(!strcmp(s, "1.#INF")) return sign;
-  if(!strcmp(s, "1.#IND")) return 2;
+  if((s[0] == 'i' || s[0] == 'I') && (s[1] == 'n' || s[1] == 'N') && (s[2] == 'f' || s[2] == 'F'))
+    return sign;
+
+#ifdef _WIN32_BIZARRE_INFNAN /* older Win32 perls stringify infinities as(-)1.#INF */
+
+   if(!strcmp(s, "1.#INF")) return sign;
+
+#endif
 
   return 0;
-#else
-  croak("Math::GMPf::_win32_infnanstring not implemented for this build of perl");
-#endif
 }
 
 unsigned long Rmpf_get_default_prec(void) {
@@ -714,6 +704,9 @@ SV * overload_mul(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_mul");}
+
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_mul");
        mpf_mul(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
@@ -808,6 +801,9 @@ SV * overload_add(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_add");}
+
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_add");
        mpf_add(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
@@ -906,6 +902,9 @@ SV * overload_sub(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_sub");}
+
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_sub");
        if(third == &PL_sv_yes) mpf_sub(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
@@ -1008,6 +1007,9 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_div");}
+
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_div");
        if(third == &PL_sv_yes) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
@@ -1128,10 +1130,17 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_gt");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+
+       NOK_POK_DUALVAR_CHECK , "overload_gt");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) ret *= -1;
+       else {
+         if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+           croak("Invalid string supplied to Math::GMPf::overload_gt");
+         ret = mpf_cmp(*a, t);
+         mpf_clear(t);
+       }
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
@@ -1194,10 +1203,17 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_gte");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+
+       NOK_POK_DUALVAR_CHECK , "overload_gte");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) ret *= -1;
+       else {
+         if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+           croak("Invalid string supplied to Math::GMPf::overload_gte");
+         ret = mpf_cmp(*a, t);
+         mpf_clear(t);
+       }
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
@@ -1260,10 +1276,17 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_lt");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+
+       NOK_POK_DUALVAR_CHECK , "overload_lt");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) ret *= -1;
+       else {
+         if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+           croak("Invalid string supplied to Math::GMPf::overload_lt");
+         ret = mpf_cmp(*a, t);
+         mpf_clear(t);
+       }
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
@@ -1326,10 +1349,17 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_lte");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+
+       NOK_POK_DUALVAR_CHECK , "overload_lte");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) ret *= -1;
+       else {
+         if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+           croak("Invalid string supplied to Math::GMPf::overload_lte");
+         ret = mpf_cmp(*a, t);
+         mpf_clear(t);
+       }
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
@@ -1395,10 +1425,17 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string supplied to Math::GMPf::overload_spaceship");
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+
+       NOK_POK_DUALVAR_CHECK , "overload_spaceship");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) ret *= -1;
+       else {
+         if(mpf_init_set_str(t, SvPV_nolen(b), 10))
+           croak("Invalid string supplied to Math::GMPf::overload_spaceship");
+         ret = mpf_cmp(*a, t);
+         mpf_clear(t);
+       }
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
@@ -1461,6 +1498,11 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_equiv");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) return newSViv(0); /* A Math::GMPf object cannot == an infinity */
        if(mpf_init_set_str(t, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_equiv");
        ret = mpf_cmp(*a, t);
@@ -1524,6 +1566,11 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_not_equiv");}
+
+       ret = _is_infstring(SvPV_nolen(b));
+       if(ret) return newSVnv(1); /* A Math::GMPf object cannot == an infinity */
        if(mpf_init_set_str(t, SvPV_nolen(b), 10))
          croak("Invalid string supplied to Math::GMPf::overload_not_equiv");
        ret = mpf_cmp(*a, t);
@@ -1729,6 +1776,9 @@ SV * overload_mul_eq(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_mul_eq");}
+
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_mul_eq");
@@ -1794,6 +1844,9 @@ SV * overload_add_eq(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_add_eq");}
+
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_add_eq");
@@ -1859,6 +1912,9 @@ SV * overload_sub_eq(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_sub_eq");}
+
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_sub_eq");
@@ -1926,6 +1982,9 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
 #endif
 
      if(SvPOK(b)) {
+
+       NOK_POK_DUALVAR_CHECK , "overload_div_eq");}
+
        if(mpf_init_set_str(t, SvPV_nolen(b), 10)) {
          SvREFCNT_dec(a);
          croak("Invalid string supplied to Math::GMPf::overload_div_eq");
@@ -2641,7 +2700,7 @@ OUTPUT:  RETVAL
 
 
 int
-_win32_infnanstring (s)
+_is_infstring (s)
 	char *	s
 
 unsigned long
