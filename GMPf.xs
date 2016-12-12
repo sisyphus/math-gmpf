@@ -2682,7 +2682,7 @@ void Rmpf_set_NV(pTHX_ mpf_t *q, SV * p) {
 
 #else
 
-     mpf_set_d(*q, (double)SvNV(p));
+     Rmpf_set_d(q, SvNV(p));
 
 #endif
 
