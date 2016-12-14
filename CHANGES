@@ -1,6 +1,9 @@
 0.42
  - Remove gmp_v from Math::GMPf::V as we don't want any library functions in that module.
  - Replace SvUV/SvIV/SvNV with SvUVX/SvIVX/SvNVX where appropriate. (In typemap, too.)
+ - Add Rmpf_get_NV and Rmpf_set_NV.
+ - Handle NOK/POK dualvars.
+ - Add Rmpf_set_IV, Rmpf_get_IV, Rmpf_fits_IV_p and Rmpf_fits_UV_p.
 
 0.41
  - Tweaks to Math::GMPf::gmp_v() and Math::GMPf::V::gmp_v()
