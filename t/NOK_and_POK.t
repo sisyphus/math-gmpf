@@ -52,7 +52,8 @@ adj($inf, \$check, 1);
 
 eval {$z = Math::GMPf->new($inf);};
 
-if($@ =~ /^First arg to Rmpf_init_set_str is not a valid base 10 number/) {print "ok 5\n"}
+if($@ =~ /^First arg to Rmpf_init_set_str is not a valid base 10 number/ ||
+   $@ =~ /cannot coerce an Inf to a Math::GMPf object/) {print "ok 5\n"}
 else {
   warn "\n \$\@: $@\n";
   print "not ok 5\n";
