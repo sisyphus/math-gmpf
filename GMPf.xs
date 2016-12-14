@@ -194,6 +194,11 @@ SV * Rmpf_init_set_d(pTHX_ double a) {
      mpf_t * mpf_t_obj;
      SV * obj_ref, * obj;
 
+     if(a != a)
+       croak("In Rmpf_init_set_d, cannot coerce a NaN to a Math::GMPf object");
+     if(a != 0 && (a / a != 1))
+       croak("In Rmpf_init_set_d, cannot coerce an Inf to a Math::GMPf object");
+
      New(1, mpf_t_obj, 1, mpf_t);
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_d function");
      obj_ref = newSV(0);
@@ -1512,11 +1517,15 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
-       mpf_init(t);
+
+#if defined(NV_IS_FLOAT128)
+
+#elif defined(NV_IS_LONG_DOUBLE)
+       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
-       mpf_init_set_d(t, SvNVX(b));
+       mpf_init2(t, 53);
+       Rmpf_set_d(&t, SvNVX(b));
 #endif
        ret = mpf_cmp(*a, t);
        mpf_clear(t);
@@ -1581,11 +1590,13 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
-       mpf_init(t);
+#if defined(NV_IS_FLOAT128)
+#elif defined(NV_IS_LONG_DOUBLE)
+       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
-       mpf_init_set_d(t, SvNVX(b));
+       mpf_init2(t, 53);
+       Rmpf_set_d(&t, SvNVX(b));
 #endif
        ret = mpf_cmp(*a, t);
        mpf_clear(t);
@@ -2517,10 +2528,53 @@ SV * _Rmpf_get_float128(mpf_t * x) {
 
 SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_LONG_DOUBLE)
+#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
 #if REQUIRED_LDBL_MANT_DIG == 2098
 
-     croak("_Rmpf_get_ld not yet implemented on double-double builds of perl");
+     mpf_t t;
+     long i, exp, retract = 0;
+     char *out;
+     long double ret = 0.0L, sign = 1.0L;
+
+     mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
+     mpf_set(t, *x);
+
+     Newxz(out, 2100, char);
+     if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
+
+     mpf_get_str(out, &exp, 2, 2098, t);
+
+     mpf_clear(t);
+
+     if(out[0] == '-') {
+       sign = -1.0L;
+       out++;
+       retract++;
+     }
+     else {
+       if(out[0] == '+') {
+         out++;
+         retract++;
+       }
+     }
+
+     for(i = 0; i < 2098; i++) {
+       if(out[i] == '1') ret += powl(2.0L, (long double)out[i]);
+     }
+
+     if(retract) out--;
+     Safefree(out);
+
+     if(exp > 2098) {
+       retract = exp - 2098; /* re-using 'retract' */
+       for(i = 0; i < retract; i++) ret *= 2.0L;
+     }
+
+     if(exp < 2098) {
+       for(i = exp; i < 2098; i++) ret /= 2.0L;
+     }
+
+     return newSVnv(ret * sign);
 
 #else
      mpf_t t;
@@ -2557,13 +2611,13 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
       1048576e0L, 524288e0L, 262144e0L, 131072e0L, 65536e0L, 32768e0L, 16384e0L, 8192e0L, 4096e0L, 2048e0L,
       1024e0L, 512e0L, 256e0L, 128e0L, 64e0L, 32e0L, 16e0L, 8e0L, 4e0L, 2e0L, 1e0L };
 
-     mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
+     mpf_init2(t, 113);
      mpf_set(t, *x);
 
-     Newxz(out, REQUIRED_LDBL_MANT_DIG + 2, char);
+     Newxz(out, 115, char);
      if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
 
-     mpf_get_str(out, &exp, 2, REQUIRED_LDBL_MANT_DIG, t);
+     mpf_get_str(out, &exp, 2, 113, t);
 
      mpf_clear(t);
 
@@ -2586,7 +2640,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      if(retract) out--;
      Safefree(out);
 
-     if(exp > 113) {
+     if(exp >113) {
        retract = exp - 113; /* re-using 'retract' */
        for(i = 0; i < retract; i++) ret *= 2.0L;
      }
