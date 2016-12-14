@@ -77,6 +77,7 @@ fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
 Rmpf_get_NV Rmpf_set_NV
+Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
     );
     our $VERSION = '0.42';
     #$VERSION = eval $VERSION;
@@ -111,6 +112,7 @@ fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
 Rmpf_get_NV Rmpf_set_NV
+Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
 )]);
 
 $Math::GMPf::NOK_POK = 0; # Set to 1 to allow warnings in new() and overloaded operations when
@@ -309,6 +311,16 @@ sub Rmpf_snprintf {
     }
 
     return $len;
+}
+
+# _Rmpz_get_IV may have returned a "string" - in which case we want to coerce it
+# to an IV. It would be more efficient to do this in XS space (TODO), but in the
+# meantime I've taken the soft option of having perl perform the coercion:
+
+sub Rmpz_get_IV {
+   my $ret = _Rmpz_get_IV(shift);
+   $ret += 0 unless _SvIOK($ret); # Set the IV flag
+   return $ret;
 }
 
 sub __GNU_MP_VERSION {return ___GNU_MP_VERSION()}
@@ -553,6 +565,8 @@ __END__
    Rmpf_set_si($rop, $si);
    Rmpf_set_d($rop, $double);
    Rmpf_set_NV($rop, $NV); # $NV is $Config{nvtype}
+   Rmpf_set_IV($rop, $IV); # $IV is $Config{ivtype}
+                           # (or $Config{uvtype}).
    Rmpf_set_z($rop, $z); # $z is a Math::GMPz object.
    Rmpf_set_q($rop, $q); # $q is a Math::GMPq object.
     Set the value of $rop from the 2nd arg.
@@ -628,7 +642,7 @@ __END__
    $double = Rmpf_get_d($op);
     Convert $op to a 'double'.
 
-   $NV = Rmpf_get_d($op); # $NV is $Config{nvtype}
+   $NV = Rmpf_get_NV($op); # $NV is $Config{nvtype}
     Convert $op to an NV.
 
    $si = Rmpf_get_si($op);
@@ -636,6 +650,14 @@ __END__
     Convert $op to a `signed long' or `unsigned long',
     truncating any fraction part.  If $op is too big for
     the return type, the result is undefined.
+
+   $IV = Rmpf_get_IV($op);
+    If $op fits into either an IV or a UV return the value of $op.
+    Otherwise return the least significant part of $op, with the
+    same sign as $op. If $op does not fit into either an IV or a
+    UV, the returned result is probably not very useful. To find
+    find out if the value will fit, use the functions
+    'Rmpf_fits_IV_p' and 'Rmpf_fits_UV_p'.
 
    ($double, $exp) = Rmpf_get_d_2exp($op);
     Find $double and $exp such that $double * (2 ** $exp),
@@ -804,8 +826,10 @@ __END__
    $bool = Rmpf_fits_sint_p($op);
    $bool = Rmpf_fits_ushort_p($op);
    $bool = Rmpf_fits_sshort_p($op);
-    Return non-zero if OP would fit in the respective C data
-    type, when truncated to an integer.
+   $bool = Rmpf_fits_UV_p($op);
+   $bool = Rmpf_fits_IV_p($op);
+    Return non-zero if OP would fit in the respective type, when
+    truncated to an integer.
 
    $iv = Math::GMPf::nok_pokflag(); # not exported
     Returns the value of the nok_pok flag. This flag is
@@ -996,13 +1020,13 @@ __END__
        -Duse64bitint, the variable is treated as a signed long long
        int if the IOK flag is set.)
 
-    3. If the variable is a double, then that value is used. The
-       variable is considered to be a double if the NOK flag is set.
-
-    4. If the variable is a string (ie the POK flag is set) then the
+    3. If the variable is a string (ie the POK flag is set) then the
        base 10 value of that string is used. If the POK flag is set,
        but the string is not a valid base 10 number, the subroutine
        croaks with an appropriate error message.
+
+    4. If the variable is a double, then that value is used. The
+       variable is considered to be a double if the NOK flag is set.
 
     5. If the variable is a Math::GMPf object (or, for operators
        specified above, a Math::MPFR object) then the value of that
