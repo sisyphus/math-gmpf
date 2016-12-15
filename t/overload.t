@@ -1076,7 +1076,8 @@ else {
 
 if(($mpf1 <=> $inf) < 0) {print "ok 91\n"}
 else {
-  warn "\n ", ($mpf1 <=> $inf), "\n";
+  my $p = ($mpf1 <=> $inf);
+  warn "\n \$p: $p\n";
   print "not ok 91\n";
 }
 
@@ -1108,7 +1109,8 @@ else {
 
 if(($ninf <=> $mpf1) < 0) {print "ok 96\n"}
 else {
-  warn "\n ", ($ninf <=> $mpf1), "\n";
+  my $p = ($ninf <=> $mpf1);
+  warn "\n \$p: $p\n";
   print "not ok 96\n";
 }
 
@@ -1129,16 +1131,16 @@ else {
 
 if(!$nan_skip) {
   eval {my $r = $mpf1 * $nanstring;};
-  if($@ =~ /^Invalid string supplied to Math::GMPf::overload_mul/) {print "ok 99\n"}
+  if($@ =~ /supplied to Math::GMPf::overload_mul/) {print "ok 99\n"}
   else {
     warn "\n \$\@: $@\n";
     print "not ok 99\n";
   }
 
-  eval{my $r = ($mpf1 <=> $nanstring);};
-  if($@ =~ /^Invalid string supplied to Math::GMPf::overload_spaceship/) {print "ok 100\n"}
+  my $r = ($mpf1 <=> $nanstring);
+  if(!defined($r)) {print "ok 100\n"}
   else {
-    warn "\n \$\@: $@\n";
+    warn "\n expected 'undef', got '$r'\n";
     print "not ok 100\n";
   }
 }
@@ -1148,7 +1150,7 @@ else {
 }
 
 eval{my $r = $mpf1 * $infstring;};
-if($@ =~ /^Invalid string supplied to Math::GMPf::overload_mul/) {print "ok 101\n"}
+if($@ =~ /supplied to Math::GMPf::overload_mul/) {print "ok 101\n"}
 else {
   warn "\n \$\@: $@\n";
   print "not ok 101\n";
