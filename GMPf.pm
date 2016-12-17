@@ -314,7 +314,7 @@ sub Rmpf_snprintf {
 }
 
 # _Rmpz_get_IV may have returned a "string" - in which case we want to coerce it
-# to an IV. It would be more efficient to do this in XS space (TODO), but in the
+# to an IV. It may be more efficient to do this in XS space (TODO), but in the
 # meantime I've taken the soft option of having perl perform the coercion:
 
 sub Rmpz_get_IV {
