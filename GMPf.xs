@@ -2642,6 +2642,11 @@ int _SvNOK(pTHX_ SV * in) {
   return 0;
 }
 
+int _SvIOK(pTHX_ SV * in) {
+  if(SvIOK(in)) return 1;
+  return 0;
+}
+
 int _SvPOK(pTHX_ SV * in) {
   if(SvPOK(in)) return 1;
   return 0;
@@ -2950,7 +2955,7 @@ SV * _Rmpf_get_IV(pTHX_ mpf_t * n) {
 
    if(mpf_sgn(*n)) negative = 1;
 
-   Newxz(out, 24, char);
+   Newxz(out, 32, char);
    if(out == NULL)
      croak("Failed to allocate memory in Rmpf_get_IV function");
 
@@ -4441,6 +4446,13 @@ _SvNOK (in)
 	SV *	in
 CODE:
   RETVAL = _SvNOK (aTHX_ in);
+OUTPUT:  RETVAL
+
+int
+_SvIOK (in)
+	SV *	in
+CODE:
+  RETVAL = _SvIOK (aTHX_ in);
 OUTPUT:  RETVAL
 
 int
