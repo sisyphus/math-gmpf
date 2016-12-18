@@ -317,8 +317,8 @@ sub Rmpf_snprintf {
 # to an IV. It may be more efficient to do this in XS space (TODO), but in the
 # meantime I've taken the soft option of having perl perform the coercion:
 
-sub Rmpz_get_IV {
-   my $ret = _Rmpz_get_IV(shift);
+sub Rmpf_get_IV {
+   my $ret = _Rmpf_get_IV(shift);
    $ret += 0 unless _SvIOK($ret); # Set the IV flag
    return $ret;
 }
