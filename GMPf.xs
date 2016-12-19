@@ -2906,7 +2906,7 @@ int _required_ldbl_mant_dig(void) {
 }
 
 /* Also handles UV values */
-void Rmpf_set_IV(mpf_t * a, SV * my_iv) {
+void Rmpf_set_IV(pTHX_ mpf_t * a, SV * my_iv) {
 
 #ifdef MATH_GMPF_NEED_LONG_LONG_INT
 
@@ -2943,9 +2943,9 @@ SV * _Rmpf_get_IV(pTHX_ mpf_t * n) {
 
    char * out;
    SV * outsv;
-   mpf_t _uv_max;
-   mpf_t _iv_min;
-   mp_exp_t expptr, negative = 0;
+   mpf_t copy;
+   mpf_t _iv_value; /* Holds either UV_MAX or IV_MIN */
+   mp_exp_t expptr;
 
    if(mpf_fits_slong_p(*n))
      return newSViv(mpf_get_si(*n));
@@ -2953,33 +2953,36 @@ SV * _Rmpf_get_IV(pTHX_ mpf_t * n) {
    if(mpf_fits_ulong_p(*n))
      return newSVuv(mpf_get_ui(*n));
 
-   if(mpf_sgn(*n)) negative = 1;
-
    Newxz(out, 32, char);
    if(out == NULL)
      croak("Failed to allocate memory in Rmpf_get_IV function");
 
-   if(negative) { /* must be less than LONG_MIN */
-     mpf_init_set_str(_iv_min, SvPV_nolen(MATH_GMPf_IV_MIN(aTHX)), 10);
-     if(mpf_cmp(*n, _iv_min) < 0) { /* must be less than IV_MIN */
+   mpf_init2(copy, mpf_get_prec(*n));
+   mpf_trunc(copy, *n);
+
+   if(mpf_sgn(*n) < 0) { /* must be less than LONG_MIN */
+     mpf_init_set_str(_iv_value, SvPV_nolen(MATH_GMPf_IV_MIN(aTHX)), 10);
+     if(mpf_cmp(copy, _iv_value) < 0) { /* must be less than IV_MIN */
        croak("Argument supplied to Rmpf_get_IV does not fit into an IV");
      }
      else { /* must fit into an IV */
-       mpf_clear(_iv_min);
-       mpf_get_str(out, &expptr, 10, 0, *n);
+       mpf_clear(_iv_value);
+       mpf_get_str(out, &expptr, 10, 0, copy);
+       mpf_clear(copy);
        outsv = newSVpv(out, 0);
        Safefree(out);
        return outsv;
      }
    }
    else { /* it's +ve */
-     mpf_init_set_str(_uv_max, SvPV_nolen(MATH_GMPf_UV_MAX(aTHX)), 10);
-     if(mpf_cmp(*n, _uv_max) > 0) { /* too big for a UV */
+     mpf_init_set_str(_iv_value, SvPV_nolen(MATH_GMPf_UV_MAX(aTHX)), 10);
+     if(mpf_cmp(copy, _iv_value) > 0) { /* too big for a UV */
        croak("Argument supplied to Rmpf_get_IV does not fit into a UV");
      }
      else { /* must fit into a UV */
-       mpf_clear(_uv_max);
-       mpf_get_str(out, &expptr, 10, 0, *n);
+       mpf_clear(_iv_value);
+       mpf_get_str(out, &expptr, 10, 0, copy);
+       mpf_clear(copy);
        outsv = newSVpv(out, 0);
        Safefree(out);
        return outsv;
@@ -2993,23 +2996,26 @@ int Rmpf_fits_IV_p(pTHX_ mpf_t * n) {
      if(mpf_fits_slong_p(*n)) return 1;
      return 0;
 #else
-     mpf_t _iv_max;
-     mpf_t _iv_min;
+     mpf_t _iv_value; /* Holds either IV_MAX or IV_MIN */
+     mpf_t copy;
      if(mpf_fits_slong_p(*n)) return 1;
-     mpf_init_set_str(_iv_min, SvPV_nolen(MATH_GMPf_IV_MIN(aTHX)), 10);
-     if(mpf_cmp(*n, _iv_min) < 0) {
-       mpf_clear(_iv_min);
+     mpf_init_set_str(_iv_value, SvPV_nolen(MATH_GMPf_IV_MIN(aTHX)), 10);
+     mpf_init2(copy, mpf_get_prec(*n));
+     mpf_trunc(copy, *n);
+     if(mpf_cmp(copy, _iv_value) < 0) {
+       mpf_clear(_iv_value);
+       mpf_clear(copy);
        return 0;
      }
-     mpf_init_set_str(_iv_max, SvPV_nolen(MATH_GMPf_IV_MAX(aTHX)), 10);
-     if(mpf_cmp(*n, _iv_max) > 0) {
-       mpf_clear(_iv_min);
-       mpf_clear(_iv_max);
+     mpf_set_str(_iv_value, SvPV_nolen(MATH_GMPf_IV_MAX(aTHX)), 10);
+     if(mpf_cmp(copy, _iv_value) > 0) {
+       mpf_clear(_iv_value);
+       mpf_clear(copy);
        return 0;
      }
 
-     mpf_clear(_iv_min);
-     mpf_clear(_iv_max);
+     mpf_clear(_iv_value);
+     mpf_clear(copy);
      return 1;
 
 #endif
@@ -3022,14 +3028,19 @@ int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
      return 0;
 #else
      mpf_t _uv_max;
+     mpf_t copy;
      if(mpf_fits_ulong_p(*n)) return 1;
      if(mpf_sgn(*n) < 0) return 0;
      mpf_init_set_str(_uv_max, SvPV_nolen(MATH_GMPf_UV_MAX(aTHX)), 10);
-     if(mpf_cmp(*n, _uv_max) > 0) {
+     mpf_init2(copy, mpf_get_prec(*n));
+     mpf_trunc(copy, *n);
+     if(mpf_cmp(copy, _uv_max) > 0) {
        mpf_clear(_uv_max);
+       mpf_clear(copy);
        return 0;
      }
      mpf_clear(_uv_max);
+     mpf_clear(copy);
      return 1;
 
 #endif
@@ -4528,7 +4539,7 @@ Rmpf_set_IV (a, my_iv)
         I32* temp;
         PPCODE:
         temp = PL_markstack_ptr++;
-        Rmpf_set_IV(a, my_iv);
+        Rmpf_set_IV(aTHX_ a, my_iv);
         if (PL_markstack_ptr != temp) {
           /* truly void, because dXSARGS not invoked */
           PL_markstack_ptr = temp;
