@@ -652,12 +652,11 @@ __END__
     the return type, the result is undefined.
 
    $IV = Rmpf_get_IV($op);
-    If $op fits into either an IV or a UV return the value of $op.
-    Otherwise return the least significant part of $op, with the
-    same sign as $op. If $op does not fit into either an IV or a
-    UV, the returned result is probably not very useful. To find
-    find out if the value will fit, use the functions
-    'Rmpf_fits_IV_p' and 'Rmpf_fits_UV_p'.
+    If $op (truncated to an integer value) fits into either an
+    IV or a UV return that IV/UV value of (truncated) $op.
+    Otherwise die with an appropriate error message. To find
+    find out if the truncated value of $op will fit, use the
+    functions 'Rmpf_fits_IV_p' and 'Rmpf_fits_UV_p'.
 
    ($double, $exp) = Rmpf_get_d_2exp($op);
     Find $double and $exp such that $double * (2 ** $exp),
@@ -826,8 +825,8 @@ __END__
    $bool = Rmpf_fits_sint_p($op);
    $bool = Rmpf_fits_ushort_p($op);
    $bool = Rmpf_fits_sshort_p($op);
-   $bool = Rmpf_fits_UV_p($op);
-   $bool = Rmpf_fits_IV_p($op);
+   $bool = Rmpf_fits_UV_p($op);    # fits into a perl UV
+   $bool = Rmpf_fits_IV_p($op);    # fits into a perl IV
     Return non-zero if OP would fit in the respective type, when
     truncated to an integer.
 
