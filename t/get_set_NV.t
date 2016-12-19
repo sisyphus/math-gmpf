@@ -4,9 +4,15 @@ use Math::GMPf qw(:mpf);
 
 print "1..4\n";
 
-Rmpf_set_default_prec(113);
+my $prec;
 
-my $nv = 1.2345678e-56;
+$prec = Math::GMPf::_required_ldbl_mant_dig() == 2098 ? 2098 : 113;
+
+warn "\n# Precision: $prec\n";
+
+Rmpf_set_default_prec($prec);
+
+my $nv = 1.2345678e-53;
 
 my $fi = Rmpf_init();
 
@@ -23,6 +29,7 @@ else {
   warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
   print "not ok 2\n";
 }
+
 
 my $inf = 999**(999**999);
 my $nan = $inf / $inf;
