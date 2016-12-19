@@ -2754,50 +2754,31 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 #if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
 #if REQUIRED_LDBL_MANT_DIG == 2098
 
-     mpf_t t;
-     long i, exp, retract = 0;
-     char *out;
-     long double ret = 0.0L, sign = 1.0L;
+     double msd, lsd;
+     long double ret;
+     mpf_t t, d;
 
-     mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
+     msd = mpf_get_d(*x);
+
+     if(msd == 0.0 || msd != msd || msd / msd != 1)
+       return newSVnv((long double)msd);
+
+     mpf_init2(t, 2098);
      mpf_set(t, *x);
 
-     Newxz(out, 2100, char);
-     if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
+     mpf_init2(d, 53);
+     mpf_set_d(d, msd);
 
-     mpf_get_str(out, &exp, 2, 2098, t);
+     mpf_sub(t, t, d);
+     mpf_clear(d);
+
+     lsd = mpf_get_d(t);
 
      mpf_clear(t);
 
-     if(out[0] == '-') {
-       sign = -1.0L;
-       out++;
-       retract++;
-     }
-     else {
-       if(out[0] == '+') {
-         out++;
-         retract++;
-       }
-     }
+     ret = (long double)msd + lsd;
 
-     for(i = 0; i < 2098; i++) {
-       if(out[i] == '1') ret += powl(2.0L, (long double)out[2097 - i]);
-     }
-
-     if(retract) out--;
-     Safefree(out);
-
-     if(exp > 2098) {
-       retract = exp - 2098; /* re-using 'retract' */
-       for(i = 0; i < retract; i++) ret *= 2.0L;
-     }
-
-     if(exp < 2098) {
-       for(i = exp; i < 2098; i++) ret /= 2.0L;
-     }
-
-     return newSVnv(ret * sign);
+     return newSVnv(ret);
 
 #else
      mpf_t t;
