@@ -806,7 +806,9 @@ SV * overload_mul(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
+#if defined(NV_IS_FLOAT128)
+       _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
+#elif defined(NV_IS_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -903,7 +905,9 @@ SV * overload_add(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
+#if defined(NV_IS_FLOAT128)
+       _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
+#elif defined(NV_IS_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1005,7 +1009,9 @@ SV * overload_sub(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
+#if defined(NV_IS_FLOAT128)
+       _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
+#elif defined(NV_IS_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1110,7 +1116,9 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SvNOK(b)) {
-#ifdef NV_IS_LONG_DOUBLE
+#if defined(NV_IS_FLOAT128)
+       _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
+#elif defined(NV_IS_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1779,7 +1787,7 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 #if defined(NV_IS_FLOAT128)
 
        mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ %d, b);
+       _Rmpf_set_float128(aTHX_ &t, b);
 
 #elif defined(NV_IS_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
@@ -1994,7 +2002,7 @@ SV * overload_mul_eq(pTHX_ SV * a, SV * b, SV * third) {
 #if defined(NV_IS_FLOAT128)
 
        mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ %d, b);
+       _Rmpf_set_float128(aTHX_ &t, b);
 
 #elif defined(NV_IS_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
@@ -2069,7 +2077,7 @@ SV * overload_add_eq(pTHX_ SV * a, SV * b, SV * third) {
 #if defined(NV_IS_FLOAT128)
 
        mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ %d, b);
+       _Rmpf_set_float128(aTHX_ &t, b);
 
 #elif defined(NV_IS_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
@@ -2144,7 +2152,7 @@ SV * overload_sub_eq(pTHX_ SV * a, SV * b, SV * third) {
 #if defined(NV_IS_FLOAT128)
 
        mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ %d, b);
+       _Rmpf_set_float128(aTHX_ &t, b);
 
 #elif defined(NV_IS_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
@@ -2221,7 +2229,7 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
 #if defined(NV_IS_FLOAT128)
 
        mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ %d, b);
+       _Rmpf_set_float128(aTHX_ &t, b);
 
 #elif defined(NV_IS_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
@@ -2664,7 +2672,7 @@ void set_nok_pok(int x) {
   nok_pok = x;
 }
 
-SV * _Rmpf_get_float128(mpf_t * x) {
+SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_FLOAT128)
      mpf_t t;
@@ -2868,7 +2876,7 @@ SV * Rmpf_get_NV(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_FLOAT128)
 
-     return _Rmpf_get_float128(x);
+     return _Rmpf_get_float128(aTHX_ x);
 
 #elif defined(NV_IS_LONG_DOUBLE)
 
@@ -4493,6 +4501,9 @@ set_nok_pok (x)
 SV *
 _Rmpf_get_float128 (x)
 	mpf_t *	x
+CODE:
+  RETVAL = _Rmpf_get_float128 (aTHX_ x);
+OUTPUT:  RETVAL
 
 SV *
 _Rmpf_get_ld (x)
