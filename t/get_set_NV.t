@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 
-print "1..4\n";
+print "1..8\n";
 
 my $prec;
 
@@ -48,6 +48,38 @@ if($@ =~ /cannot coerce a NaN to a Math::GMPf object/) {print "ok 4\n"}
 else {
   warn "\n \$\@: $@\n";
   print "not ok 4\n";
+}
+
+$nv = -123.45678;
+
+Rmpf_set_NV($fi, $nv);
+
+if($fi == $nv) {print "ok 5\n"}
+else {
+  warn "\n $fi != $nv\n";
+  print "not ok 5\n";
+}
+
+if($nv == Rmpf_get_NV($fi)) {print "ok 6\n"}
+else {
+  warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
+  print "not ok 6\n";
+}
+
+$nv = -123456.78e70;
+
+Rmpf_set_NV($fi, $nv);
+
+if($fi == $nv) {print "ok 7\n"}
+else {
+  warn "\n $fi != $nv\n";
+  print "not ok 7\n";
+}
+
+if($nv == Rmpf_get_NV($fi)) {print "ok 8\n"}
+else {
+  warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
+  print "not ok 8\n";
 }
 
 
