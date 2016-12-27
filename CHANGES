@@ -1,4 +1,5 @@
 0.43
+ - Fix test script bugs (t/NOK_and_POK.t).
 
 0.42
  - Remove gmp_v from Math::GMPf::V as we don't want any library functions in that module.
