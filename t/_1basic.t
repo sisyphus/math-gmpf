@@ -16,7 +16,7 @@ if($Math::GMPf::VERSION eq '0.43' && $Math::GMPf::Random::VERSION eq '0.43' &&
    $Math::GMPf::V::VERSION eq '0.43' &&
    Math::GMPf::_get_xs_version() eq $Math::GMPf::VERSION) {print "ok 1\n"}
 else {
-  warn "$Math::GMPf::VERSION $Math::GMPf::Random::VERSION $Math::GMPf::VERSION ",
+  warn "$Math::GMPf::VERSION $Math::GMPf::Random::VERSION $Math::GMPf::V::VERSION ",
         Math::GMPf::_get_xs_version(), "\n";
   print "not ok 1\n";
 }
