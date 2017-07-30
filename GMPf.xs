@@ -234,7 +234,32 @@ SV * Rmpf_init_set_d(pTHX_ double a) {
 }
 
 void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
-#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
+#if REQUIRED_LDBL_MANT_DIG == 2098   /* double-double */
+     double msd;                     /* Most Significant Double */
+     mpf_t t, d;
+     long double lsd;                /* Will be assigned the Least Siginficant Double */
+
+     msd = (double)SvNVX(p);
+     if(msd != 0.0) {
+       if(msd != msd) croak("In _Rmpf_set_ld, cannot coerce a NaN to a Math::GMPf object");
+       if(msd / msd != 1.0) croak("In _Rmpf_set_ld, cannot coerce an Inf to a Math::GMPf object");
+     }
+
+     lsd = SvNVX(p) - (long double)msd;
+
+     mpf_init2(t, 2098);
+     mpf_init2(d, 53);
+     mpf_set_d(t, msd);
+     mpf_set_d(d, (double)lsd);
+     mpf_add(t, t, d);
+
+     mpf_clear(d);
+
+     mpf_set(*q, t);
+
+     mpf_clear(t);
+
+#elif defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
      char * buffer;
      int exp, exp2 = 0;
      long double fr, buffer_size;
