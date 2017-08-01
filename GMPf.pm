@@ -640,10 +640,12 @@ __END__
    CONVERSION FUNCTIONS
 
    $double = Rmpf_get_d($op);
-    Convert $op to a 'double'.
+    Convert $op to a 'double, truncating if necessary (i.e. rounding
+    towards zero).
 
    $NV = Rmpf_get_NV($op); # $NV is $Config{nvtype}
-    Convert $op to an NV.
+    Convert $op to an NV, truncating if necessary (i.e. rounding
+    towards zero).
 
    $si = Rmpf_get_si($op);
    $ui = Rmpf_get_ui($op);
