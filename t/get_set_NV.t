@@ -20,8 +20,9 @@ Rmpf_set_NV($fi, $nv);
 
 # For double-double architectures we need to be able to use a precision of 2098 bits.
 # However, with GMP, we get only 2080 or 2112, and nothing in between.
-# I'm finding small (off by one ULP) discrepancies - not yet sure why. Currently we
-# avoid test failures here by testing for "near enough" instead.
+# I'm finding small (off by one ULP) discrepancies - because mpf_get_d (which we need
+# to call in Rmpf_get_NV) truncates instead of rounding to nearest.
+# Currently we avoid test failures here by testing for "near enough" instead.
 # We can, however, expect '==' overloading to be accurate here because it compares $fi
 # with another (temporary) 2112 bit Math::GMPf object that has been assigned $nv using
 # the exact same function (_Rmpf_set_ld) that assigned $nv to $fi in the first place.
