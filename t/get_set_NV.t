@@ -2,11 +2,11 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 
-print "1..8\n";
+print "1..9\n";
 
 my $prec;
 
-$prec = Math::GMPf::_required_ldbl_mant_dig() == 2098 ? 2098 : 113;
+$prec = 2112; # Cover precisions of all NV's
 
 Rmpf_set_default_prec($prec);
 
@@ -18,15 +18,6 @@ my $fi = Rmpf_init();
 
 Rmpf_set_NV($fi, $nv);
 
-# For double-double architectures we need to be able to use a precision of 2098 bits.
-# However, with GMP, we get only 2080 or 2112, and nothing in between.
-# I'm finding small (off by one ULP) discrepancies - because mpf_get_d (which we need
-# to call in Rmpf_get_NV) truncates instead of rounding to nearest.
-# Currently we avoid test failures here by testing for "near enough" instead.
-# We can, however, expect '==' overloading to be accurate here because it compares $fi
-# with another (temporary) 2112 bit Math::GMPf object that has been assigned $nv using
-# the exact same function (_Rmpf_set_ld) that assigned $nv to $fi in the first place.
-
 if($fi == $nv) {print "ok 1\n"}
 else {
   warn "\n $fi != $nv\n";
@@ -36,7 +27,7 @@ else {
 # With double-double arch we get an off-by-one ULP discrepancy in test 2 if we test for
 # equivalence. Therefore we test for "near enough".
 
-if(Rmpf_get_default_prec == 2112) {
+if(1e250 != 1e250 + 1e-250) { # We have double-double NV
 
   my $eps = $nv - Rmpf_get_NV($fi);
 
@@ -94,8 +85,6 @@ $nv = -123456.78e70;
 
 Rmpf_set_NV($fi, $nv);
 
-# With double-double, as for test 1, test 7 also holds good for '==' overloading.
-
 if($fi == $nv) {print "ok 7\n"}
 else {
   warn "\n $fi != $nv\n";
@@ -104,7 +93,7 @@ else {
 
 # With double-double, as for test 2, we also need to test for "near enough" in test 8.
 
-if(Rmpf_get_default_prec == 2112) {
+if(1e250 != 1e250 + 1e-250) { # We have double-double NV
 
   my $eps = $nv - Rmpf_get_NV($fi);
 
@@ -122,13 +111,47 @@ else {
   }
 }
 
-__END__
+my $have_mpfr = 0;
 
-#perl: 1.234567800000000087541178051629e-53 -8.754117805162882394639726134476e-70
-#gmp:  1.234567800000000087541178051629e-53 -8.754117805162883681529123501483e-70
+eval {require Math::MPFR;};
 
-#perl: 34f2eb713a90e170b1982adffc09278b
-#gmp:  34f2eb713a90e170b1982adffc09278c
+unless($@) {$have_mpfr = 1}
+else {
+  warn "Skipping test 9\n \$\@: $@";
+  print "ok 9\n";
+  exit 0;
+}
 
+my $ok = 1;
 
+for(-1080 .. 1030) {
+  my $str = random_string($prec) . "e$_";
+  my $mpf  = Math::GMPf->new($str, -2);
+  my $mpfr = Math::MPFR->new($str,  2);
+
+  my $mpf_d  = Rmpf_get_NV_rndn($mpf);
+  my $mpfr_d = Math::MPFR::Rmpfr_get_NV    ($mpfr, 0);
+
+  if($mpf_d != $mpfr_d) {
+    $ok = 0;
+    my $mpf_pack  = scalar reverse unpack "h*", pack "d<", $mpf_d;
+    my $mpfr_pack = scalar reverse unpack "h*", pack "d<", $mpfr_d;
+    warn "$str\nGMPf: $mpf_pack\nMPFR: $mpfr_pack\n";
+    warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+  }
+}
+
+if($ok) {print "ok 9\n"}
+else    {print "not ok 9\n"}
+
+sub random_string {
+  my $ret = '';
+  for (1..$prec) {$ret .= int rand(2)}
+  $ret =~ s/^0+//;
+  if(int(rand(2))) {$ret =  '0.' . $ret}
+  else             {$ret = '-0.' . $ret}
+  return $ret;
+}
+
+# -1022, -1023, -1024 can fail
 
