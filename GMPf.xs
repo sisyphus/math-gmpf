@@ -2791,7 +2791,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      long double ret;
      mpf_t t, d;
 
-     msd = mpf_get_d(*x);
+     msd = mpf_get_d_rndn(*x);
 
      if(msd == 0.0 || msd != msd || msd / msd != 1)
        return newSVnv((long double)msd);
@@ -2805,7 +2805,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      mpf_sub(t, t, d);
      mpf_clear(d);
 
-     lsd = mpf_get_d(t);
+     lsd = mpf_get_d_rndn(t);
 
      mpf_clear(t);
 
@@ -3060,7 +3060,174 @@ int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
 #endif
 }
 
+/************************************************
 
+_rndaz:
+
+The Rmpf_get_d function rounds towards zero (because this is what
+mpf_get_d does.
+If you prefer rounding to nearest, ties to even, then instead use
+Rmpf_get_d_rndn.
+
+For some values/precisions Rmpf_get_d and Rmpf_get_d_rndn will
+return the same double. For other values/precisions there will be
+a discrepancy of 1 unit of least precision (1 ULP).
+
+The _rndaz function merely tells us whether Rmpf_get_d_rndn and
+Rmpf_get_d will return the same double (or not).
+
+_rndaz takes 2 arguments:
+ 1) a base 2 representation of the mantissa of the Math::GMPf
+    object - with implied radix point to the left of the first
+    digit;
+ 2) the exponent of the Math::GMPf object;
+
+These 2 arguments are returned by Rmpf_deref2.
+
+If '0' is returned, then Rmpf_get_d and Rmpf_get_d_rndn will return
+identical doubles.
+
+If '1' is returned, then there will be a 1 ULP discrepancy in the
+respective doubles.
+
+I think there's a problem with Rmpf_set_d and/or Rmpf_set_str that
+can cause some strange results - though it rarely raises its head.
+But this will need to be looked at separately. Here, we are concerned
+solely with Rmpf_get_d.
+
+************************************************/
+
+int _rndaz(char *a, IV exponent) {
+  size_t len;
+  int i;
+  int cut_off = 53; /**********************************
+                    The no.of base 2 mantissa digits.
+                    ++ this value (below) if the string
+                    begins with '+' or '-'.
+                    Amend this value accordingly (below)
+                    if the exponent is in the subnormal
+                    range
+                    **********************************/
+
+  /**********************************************
+
+  In GMP notation, smallest (subnormal) representable value is 0.1e-1073
+  (4.9406564584124654e-324), but 0.11e-1074 (or larger) should round to
+  the smallest representable value.
+  Anything smaller than 0.11e-1074 should be set to 0.0 on conversion
+  to 'double'.
+  Therefore _rndaz can return 0 whenever the "exponent" argument is
+  less than -1074.
+
+  ***********************************************/
+
+  if(exponent < -1074) return 0;
+
+  if(exponent < -1021) cut_off -= -1021 - exponent;
+
+  len = strlen(a);
+  /* printf("len: %u\n", len); */
+
+  if(a[0] == '-' || a[0] == '+') ++cut_off;
+
+  /* printf("cut_off: %d\n", cut_off); */
+
+  if(len <= cut_off) return 0;          /* no rounding required */
+
+  if(a[cut_off] == '0') return 0;       /* no rounding required */
+
+  /* will get to here only if a[cut_off] == '1' */
+
+  if(a[cut_off - 1] == '1') return 1; /* rnda */
+
+  if(len > cut_off + 1) {
+
+    for(i = cut_off + 1; i < len; ++i) {
+      if(a[i] == '1') return 1;         /* rnda */
+    }
+  }
+
+  return 0;                             /* no rounding required */
+}
+
+/* char * mpf_get_str (char *str, mp_exp_t *expptr, int base, size_t n_digits, const mpf_t op) */
+
+double Rmpf_get_d_rndn(mpf_t * p) {
+  char * buf;
+  mp_exp_t exponent;
+  size_t n_digits;
+  mpf_t temp, dbl_min;
+  double d;
+
+  n_digits = mpf_get_prec(*p);
+
+  Newxz(buf, n_digits + 2, char);
+
+  mpf_get_str(buf, &exponent, 2, n_digits, *p);
+
+  /* printf("exponent: %d\n", exponent); */
+
+  if(_rndaz(buf, (IV)exponent)) {
+    /* printf("ROUNDING AWAY FROM ZERO\n"); */
+    Safefree(buf);
+    mpf_init2(temp, n_digits);
+    mpf_set_ui(temp, 1);
+    if(exponent <= 53) mpf_div_2exp(temp, temp, 53 - exponent);
+    else mpf_mul_2exp(temp, temp, exponent - 53);
+
+    /***********************************************
+
+    For the (subnormal) exponent range -1074 ..-1021, rounding away
+    from zero will be achieved by simply adding the smallest
+    representable (subnormal) value (0.1e-1073)
+
+    ***********************************************/
+
+    if(exponent < -1021 && exponent > -1075) { /* handle subnormal doubles */
+      mpf_init2(dbl_min, 64);
+      mpf_set_ui(dbl_min, 1);
+
+      mpf_div_2exp(dbl_min, dbl_min, 1074); /*********************************
+                                             dbl_min set to smallest non-zero
+                                             positive (subnormal) value
+                                             ********************************/
+
+      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, dbl_min);
+      else mpf_sub(temp, *p, dbl_min);
+      mpf_clear(dbl_min);
+    }
+    else { /* handle normal doubles */
+      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, temp);
+      else mpf_sub(temp, *p, temp);
+    }
+
+    d = mpf_get_d(temp);
+    mpf_clear(temp);
+    return d;
+  }
+
+  Safefree(buf);
+  return mpf_get_d(*p);
+
+}
+
+SV * Rmpf_get_NV_rndn(pTHX_ mpf_t * x) {
+
+#if defined(NV_IS_FLOAT128)
+
+     return _Rmpf_get_float128(aTHX_ x);
+
+#elif defined(NV_IS_LONG_DOUBLE)
+
+     return _Rmpf_get_ld(aTHX_ x);
+
+#else
+
+     return newSVnv(Rmpf_get_d_rndn(x));
+
+#endif
+
+}
 
 
 
@@ -4605,5 +4772,21 @@ Rmpf_fits_UV_p (n)
 	mpf_t *	n
 CODE:
   RETVAL = Rmpf_fits_UV_p (aTHX_ n);
+OUTPUT:  RETVAL
+
+int
+_rndaz (a, exponent)
+	char *	a
+	IV	exponent
+
+double
+Rmpf_get_d_rndn (p)
+	mpf_t *	p
+
+SV *
+Rmpf_get_NV_rndn (x)
+	mpf_t *	x
+CODE:
+  RETVAL = Rmpf_get_NV_rndn (aTHX_ x);
 OUTPUT:  RETVAL
 
