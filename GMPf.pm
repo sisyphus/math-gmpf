@@ -76,7 +76,7 @@ fgmp_randinit_default fgmp_randinit_mt fgmp_randinit_lc_2exp fgmp_randinit_lc_2e
 fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
-Rmpf_get_NV Rmpf_set_NV
+Rmpf_get_NV Rmpf_set_NV Rmpf_get_NV_rndn Rmpf_get_d_rndn
 Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
     );
     our $VERSION = '0.43';
@@ -111,7 +111,7 @@ fgmp_randinit_default fgmp_randinit_mt fgmp_randinit_lc_2exp fgmp_randinit_lc_2e
 fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
-Rmpf_get_NV Rmpf_set_NV
+Rmpf_get_NV Rmpf_set_NV Rmpf_get_NV_rndn Rmpf_get_d_rndn
 Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
 )]);
 
@@ -640,12 +640,16 @@ __END__
    CONVERSION FUNCTIONS
 
    $double = Rmpf_get_d($op);
-    Convert $op to a 'double, truncating if necessary (i.e. rounding
-    towards zero).
+   $double = Rmpf_get_d_rndn($op)
+    Convert $op to a 'double. Rmpf_get_d will truncate if necessary
+   (i.e. round towards zero). Rmpf_get_d_rndn will round to
+   nearest, ties to even.
 
-   $NV = Rmpf_get_NV($op); # $NV is $Config{nvtype}
-    Convert $op to an NV, truncating if necessary (i.e. rounding
-    towards zero).
+   $NV = Rmpf_get_NV($op);      # $NV is $Config{nvtype}
+   $NV = Rmpf_get_NV_rndn($op); # $NV is $Config{nvtype}
+    Convert $op to an NV. Rmpf_get_NV will truncate if necessary
+    (i.e. round towards zero). Rmpf_get_NV_rndn will round to
+    nearest, ties to even.
 
    $si = Rmpf_get_si($op);
    $ui = Rmpf_get_ui($op);
