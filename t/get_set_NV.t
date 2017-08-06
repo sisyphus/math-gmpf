@@ -8,7 +8,7 @@ my $prec;
 
 $prec = 2112; # Cover precisions of all NV's
 
-Rmpf_set_default_prec($prec);
+Rmpf_set_default_prec ($prec);
 
 warn "\n# Precision: ", Rmpf_get_default_prec(), "\n";
 
@@ -124,20 +124,27 @@ else {
 
 my $ok = 1;
 
+Math::MPFR::Rmpfr_set_default_prec($prec);
+
+my $print_err = 0;
+
 for(-1080 .. 1030) {
   my $str = random_string($prec) . "e$_";
   my $mpf  = Math::GMPf->new($str, -2);
   my $mpfr = Math::MPFR->new($str,  2);
 
   my $mpf_d  = Rmpf_get_NV_rndn($mpf);
-  my $mpfr_d = Math::MPFR::Rmpfr_get_NV    ($mpfr, 0);
+  my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0); # Round to nearest, ties to even.
 
   if($mpf_d != $mpfr_d) {
     $ok = 0;
     my $mpf_pack  = scalar reverse unpack "h*", pack "d<", $mpf_d;
     my $mpfr_pack = scalar reverse unpack "h*", pack "d<", $mpfr_d;
-    warn "$str\nGMPf: $mpf_pack\nMPFR: $mpfr_pack\n";
-    warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+    if($print_err < 2) { # give specifics for first 2 errors only.
+      warn "$str\nGMPf: $mpf_pack\nMPFR: $mpfr_pack\n";
+      warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+      $print_err++;
+    }
   }
 }
 
@@ -146,12 +153,11 @@ else    {print "not ok 9\n"}
 
 sub random_string {
   my $ret = '';
-  for (1..$prec) {$ret .= int rand(2)}
+  for (1..$_[0]) {$ret .= int rand(2)}
   $ret =~ s/^0+//;
   if(int(rand(2))) {$ret =  '0.' . $ret}
   else             {$ret = '-0.' . $ret}
   return $ret;
 }
 
-# -1022, -1023, -1024 can fail
 
