@@ -3060,6 +3060,42 @@ int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
 #endif
 }
 
+/*************************************************
+_cut_off:
+
+First 3 args are as for _rndaz (below). If the 4th arg is
+true, the bit index of the least significant bit of the given
+value (when converted to a double) is printed to STDOUT.
+Returns an integer x, representing that bit plus the next 11
+bits.
+To view those bits:
+ printf "%011b", $x;
+
+*************************************************/
+
+int _cut_off(char *a, IV exponent, UV prec, int display) {
+  int ret = 0, i, ulp_pos = 52, add_on = 1024;
+
+  if(prec < 64) {
+    warn("3rd arg (prec = %u) supplied to Math::GMPf::_cut_off is < 64", display);
+    return 0;
+  }
+
+  if(exponent < -1074) return 0;
+  if(exponent < -1021) ulp_pos -= -1021 - exponent;
+  if(a[0] == '-' || a[0] == '+') ++ulp_pos;
+
+  if(display) printf("len: %u ULP index: %d\n", strlen(a), ulp_pos);
+
+  for(i = 0; i < 11; ++i) {
+    if(a[ulp_pos + 1] == '1') ret += add_on;
+    add_on >>= 1;
+  }
+
+  return ret;
+}
+
+
 /************************************************
 
 _rndaz:
@@ -3076,13 +3112,18 @@ a discrepancy of 1 unit of least precision (1 ULP).
 The _rndaz function merely tells us whether Rmpf_get_d_rndn and
 Rmpf_get_d will return the same double (or not).
 
-_rndaz takes 2 arguments:
+_rndaz takes 4 arguments:
  1) a base 2 representation of the mantissa of the Math::GMPf
     object - with implied radix point to the left of the first
     digit;
  2) the exponent of the Math::GMPf object;
+ 3) the precision (no. of bits) of the Math::GMPf object;
+ 4) a boolean (integer) argument
 
-These 2 arguments are returned by Rmpf_deref2.
+The first 2 arguments are returned by Rmpf_deref2, the third by
+Rmpf_get_prec.
+If the 4th argument is true, then the length of the binary string,
+and the index of the ULP, will be printed to STDOUT.
 
 If '0' is returned, then Rmpf_get_d and Rmpf_get_d_rndn will return
 identical doubles.
@@ -3097,11 +3138,11 @@ solely with Rmpf_get_d.
 
 ************************************************/
 
-int _rndaz(char *a, IV exponent) {
+int _rndaz(char *a, IV exponent, UV prec, int display) {
   size_t len;
   int i;
-  int cut_off = 53; /**********************************
-                    The no.of base 2 mantissa digits.
+  int ulp_pos = 52; /**********************************
+                    The index of the ulp in base 2 mantissa.
                     ++ this value (below) if the string
                     begins with '+' or '-'.
                     Amend this value accordingly (below)
@@ -3122,27 +3163,27 @@ int _rndaz(char *a, IV exponent) {
   ***********************************************/
 
   if(exponent < -1074) return 0;
+  if(prec < 53) return 0;
 
-  if(exponent < -1021) cut_off -= -1021 - exponent;
+  if(exponent < -1021) ulp_pos -= -1021 - exponent;
 
   len = strlen(a);
-  /* printf("len: %u\n", len); */
 
-  if(a[0] == '-' || a[0] == '+') ++cut_off;
+  if(a[0] == '-' || a[0] == '+') ++ulp_pos;
 
-  /* printf("cut_off: %d\n", cut_off); */
+  if(len <= ulp_pos + 1) return 0;          /* no rounding required */
 
-  if(len <= cut_off) return 0;          /* no rounding required */
+  if(display) printf("len: %u ULP index: %d\n", len, ulp_pos);
 
-  if(a[cut_off] == '0') return 0;       /* no rounding required */
+  if(a[ulp_pos + 1] == '0') return 0;       /* no rounding required */
 
-  /* will get to here only if a[cut_off] == '1' */
+  /* will get to here only if a[ulp_pos + 1] == '1' */
 
-  if(a[cut_off - 1] == '1') return 1; /* rnda */
+  if(a[ulp_pos] == '1') return 1; /* rnda */
 
-  if(len > cut_off + 1) {
+  if(len > ulp_pos + 2) {
 
-    for(i = cut_off + 1; i < len; ++i) {
+    for(i = ulp_pos + 2; i < len; ++i) {
       if(a[i] == '1') return 1;         /* rnda */
     }
   }
@@ -3159,7 +3200,7 @@ double Rmpf_get_d_rndn(mpf_t * p) {
   mpf_t temp, dbl_min;
   double d;
 
-  n_digits = mpf_get_prec(*p);
+  n_digits = (size_t)mpf_get_prec(*p);
 
   Newxz(buf, n_digits + 2, char);
 
@@ -3167,7 +3208,7 @@ double Rmpf_get_d_rndn(mpf_t * p) {
 
   /* printf("exponent: %d\n", exponent); */
 
-  if(_rndaz(buf, (IV)exponent)) {
+  if(_rndaz(buf, (IV)exponent, (UV)n_digits, 0)) {
     /* printf("ROUNDING AWAY FROM ZERO\n"); */
     Safefree(buf);
     mpf_init2(temp, n_digits);
@@ -4775,9 +4816,18 @@ CODE:
 OUTPUT:  RETVAL
 
 int
-_rndaz (a, exponent)
+_cut_off (a, exponent, prec, display)
 	char *	a
 	IV	exponent
+	UV	prec
+	int	display
+
+int
+_rndaz (a, exponent, prec, display)
+	char *	a
+	IV	exponent
+	UV	prec
+	int	display
 
 double
 Rmpf_get_d_rndn (p)
