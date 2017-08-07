@@ -3172,7 +3172,7 @@ int _rndaz(char *a, IV exponent, UV prec, int display) {
   size_t len;
   int i, min_prec, low_subnormal_exp, high_subnormal_exp, ulp_pos;
 
-#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && REQUIRED_LDBL_MANT_DIG == 2098)
+#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && (REQUIRED_LDBL_MANT_DIG == 2098 || REQUIRED_LDBL_MANT_DIG == 53))
   ulp_pos = 52;
   min_prec = 64;
   low_subnormal_exp = -1074;
@@ -3203,7 +3203,6 @@ int _rndaz(char *a, IV exponent, UV prec, int display) {
 #endif
 
   if(exponent < low_subnormal_exp) return 0;
-  if(prec < min_prec) return 0;
 
   if(exponent < high_subnormal_exp) ulp_pos -= high_subnormal_exp - exponent;
 
@@ -3324,9 +3323,17 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
      return newSVnv(ret);
 
 #else
-     mpf_t t;
+#if REQUIRED_LDBL_MANT_DIG == 53
+     long low_subnormal_exp = -1074, high_subnormal_exp = -1021;
+#elif REQUIRED_LDBL_MANT_DIG == 64
+     long low_subnormal_exp = -16445, high_subnormal_exp = -16381;
+#else
+     long low_subnormal_exp = -16494, high_subnormal_exp = -16381;
+#endif
+     mpf_t t, ldbl_min;
      size_t n_digits;
      long i, exp, retract = 0;
+     int subnormal = 0;
      char *out;
      long double ret = 0.0L, sign = 1.0L;
      long double add_on[113] = {
@@ -3374,8 +3381,27 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
      mpf_get_str(out, &exp, 2, n_digits, t);
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
-       /* Needs rounding away from zero */
-       printf(".");
+       mpf_set_ui(t, 1);
+       if(exp <= REQUIRED_LDBL_MANT_DIG) mpf_div_2exp(t, t, REQUIRED_LDBL_MANT_DIG - exp);
+       else mpf_mul_2exp(t, t, exp - REQUIRED_LDBL_MANT_DIG);
+
+       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
+         subnormal = 1;
+         mpf_init2(ldbl_min, 64);
+         mpf_set_ui(ldbl_min, 1);
+         mpf_div_2exp(ldbl_min, ldbl_min, (low_subnormal_exp - 1)  * -1);
+
+         if(mpf_sgn(*x) > 0) mpf_add(t, *x, ldbl_min);
+         else mpf_sub(t, *x, ldbl_min);
+         mpf_clear(ldbl_min);
+       }
+       else { /* handle normal doubles */
+         if(mpf_sgn(*x) > 0) mpf_add(t, *x, t);
+         else mpf_sub(t, *x, t);
+       }
+
+       mpf_get_str(out, &exp, 2, n_digits, t); /* overwrite out with the corrected value */
+
      }
 
      mpf_clear(t);
