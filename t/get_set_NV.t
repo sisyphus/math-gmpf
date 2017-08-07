@@ -2,11 +2,11 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 
-print "1..9\n";
+print "1..10\n";
 
 my $prec;
 
-$prec = 64; # Cover precisions of all NV's
+$prec = 2112; # Cover precisions of all NV's
 
 Rmpf_set_default_prec ($prec);
 
@@ -117,8 +117,9 @@ eval {require Math::MPFR;};
 
 unless($@) {$have_mpfr = 1}
 else {
-  warn "Skipping test 9\n \$\@: $@";
+  warn "\n Skipping tests 9 and 10\n \$\@: $@";
   print "ok 9\n";
+  print "ok 10\n";
   exit 0;
 }
 
@@ -129,7 +130,6 @@ Math::MPFR::Rmpfr_set_default_prec($prec);
 my $print_err = 0;
 
 for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
-#for(-16442) {
   my $str = random_string($prec) . "e$_";
 
   my $mpf  = Math::GMPf->new($str, -2);
@@ -155,6 +155,42 @@ for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..1
 
 if($ok) {print "ok 9\n"}
 else    {print "not ok 9\n"}
+
+$prec = 64;
+
+Rmpf_set_default_prec ($prec);
+Math::MPFR::Rmpfr_set_default_prec($prec);
+
+warn "\n# Precision: $prec\n";
+
+$print_err = 0;
+
+for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+  my $str = random_string($prec) . "e$_";
+
+  my $mpf  = Math::GMPf->new($str, -2);
+  my $mpfr = Math::MPFR->new($str,  2);
+
+  my $mpf_d  = Rmpf_get_NV_rndn($mpf);
+  my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);  # Round towards nearest, ties to even.
+
+  if($mpf_d != $mpfr_d) {
+    $ok = 0;
+    my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
+    my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
+    if($print_err < 2) { # give specifics for first 2 errors only.
+      warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
+      warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+      my @args = Rmpf_deref2($mpf, 2, $prec);
+      my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
+      print $rndaz, "\n";
+      $print_err++;
+    }
+  }
+}
+
+if($ok) {print "ok 10\n"}
+else    {print "not ok 10\n"}
 
 sub random_string {
   my $ret = '';
