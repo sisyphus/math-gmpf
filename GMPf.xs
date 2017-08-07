@@ -2782,6 +2782,171 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
 }
 
+/************************************************
+
+_rndaz:
+
+The Rmpf_get_d function rounds towards zero (because this is what
+mpf_get_d does.
+If you prefer rounding to nearest, ties to even, then instead use
+Rmpf_get_d_rndn.
+
+For some values/precisions Rmpf_get_d and Rmpf_get_d_rndn will
+return the same double. For other values/precisions there will be
+a discrepancy of 1 unit of least precision (1 ULP).
+
+The _rndaz function merely tells us whether Rmpf_get_d_rndn and
+Rmpf_get_d will return the same double (or not).
+
+_rndaz takes 4 arguments:
+ 1) a base 2 representation of the mantissa of the Math::GMPf
+    object - with implied radix point to the left of the first
+    digit;
+ 2) the exponent of the Math::GMPf object;
+ 3) the precision (no. of bits) of the Math::GMPf object;
+ 4) a boolean (integer) argument
+
+The first 2 arguments are returned by Rmpf_deref2, the third by
+Rmpf_get_prec.
+If the 4th argument is true, then the length of the binary string,
+and the index of the ULP, will be printed to STDOUT.
+
+If '0' is returned, then Rmpf_get_d and Rmpf_get_d_rndn will return
+identical doubles.
+
+If '1' is returned, then there will be a 1 ULP discrepancy in the
+respective doubles.
+
+I think there's a problem with Rmpf_set_d and/or Rmpf_set_str that
+can cause some strange results - though it rarely raises its head.
+But this will need to be looked at separately. Here, we are concerned
+solely with Rmpf_get_d.
+
+************************************************/
+
+int _rndaz(char *a, IV exponent, UV prec, int display) {
+  size_t len;
+  int i, min_prec, low_subnormal_exp, high_subnormal_exp, ulp_pos;
+
+#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && (REQUIRED_LDBL_MANT_DIG == 2098 || REQUIRED_LDBL_MANT_DIG == 53))
+  ulp_pos = 52;
+  min_prec = 64;
+  low_subnormal_exp = -1074;
+  high_subnormal_exp = -1021;
+
+#elif defined(NV_IS_LONG_DOUBLE)
+  ulp_pos = REQUIRED_LDBL_MANT_DIG - 1;
+  if(ulp_pos == 63) {
+    min_prec = 96;
+    low_subnormal_exp = -16445 ;
+    high_subnormal_exp = -16381 ;
+  }
+  else {
+    if(ulp_pos != 112) croak("In _rndaz, ulp_pos has been set to an insane value (%d)", ulp_pos);
+    min_prec = 128;
+    low_subnormal_exp = -16494 ;
+    high_subnormal_exp = -16381 ;
+  }
+
+#elif defined(NV_IS_FLOAT128)
+    ulp_pos = 112;
+    min_prec = 128;
+    low_subnormal_exp = -16494 ;
+    high_subnormal_exp = -16381 ;
+
+#else
+  croak("In _rndaz, cannot determine the NV type");
+#endif
+
+  if(exponent < low_subnormal_exp) return 0;
+
+  if(exponent < high_subnormal_exp) ulp_pos -= high_subnormal_exp - exponent;
+
+  len = strlen(a);
+
+  if(a[0] == '-' || a[0] == '+') ++ulp_pos;
+
+  if(len <= ulp_pos + 1) return 0;          /* no rounding required */
+
+  if(display) printf("len: %u ULP index: %d\n", (unsigned int)len, ulp_pos);
+
+  if(a[ulp_pos + 1] == '0') return 0;       /* no rounding required */
+
+  /* will get to here only if a[ulp_pos + 1] == '1' */
+
+  if(a[ulp_pos] == '1') return 1; /* rnda */
+
+  if(len > ulp_pos + 2) {
+
+    for(i = ulp_pos + 2; i < len; ++i) {
+      if(a[i] == '1') return 1;         /* rnda */
+    }
+  }
+
+  return 0;                             /* no rounding required */
+}
+
+/* char * mpf_get_str (char *str, mp_exp_t *expptr, int base, size_t n_digits, const mpf_t op) */
+
+double Rmpf_get_d_rndn(mpf_t * p) {
+  char * buf;
+  mp_exp_t exponent;
+  size_t n_digits;
+  mpf_t temp, dbl_min;
+  double d;
+
+  n_digits = (size_t)mpf_get_prec(*p);
+
+  Newxz(buf, n_digits + 2, char);
+
+  mpf_get_str(buf, &exponent, 2, n_digits, *p);
+
+  /* printf("exponent: %d\n", exponent); */
+
+  if(_rndaz(buf, (IV)exponent, (UV)n_digits, 0)) {
+    /* printf("ROUNDING AWAY FROM ZERO\n"); */
+    Safefree(buf);
+    mpf_init2(temp, n_digits);
+    mpf_set_ui(temp, 1);
+    if(exponent <= 53) mpf_div_2exp(temp, temp, 53 - exponent);
+    else mpf_mul_2exp(temp, temp, exponent - 53);
+
+    /***********************************************
+
+    For the (subnormal) exponent range -1074 ..-1021, rounding away
+    from zero will be achieved by simply adding the smallest
+    representable (subnormal) value (0.1e-1073)
+
+    ***********************************************/
+
+    if(exponent < -1021 && exponent > -1075) { /* handle subnormal doubles */
+      mpf_init2(dbl_min, 64);
+      mpf_set_ui(dbl_min, 1);
+
+      mpf_div_2exp(dbl_min, dbl_min, 1074); /*********************************
+                                             dbl_min set to smallest non-zero
+                                             positive (subnormal) value
+                                             ********************************/
+
+      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, dbl_min);
+      else mpf_sub(temp, *p, dbl_min);
+      mpf_clear(dbl_min);
+    }
+    else { /* handle normal doubles */
+      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, temp);
+      else mpf_sub(temp, *p, temp);
+    }
+
+    d = mpf_get_d(temp);
+    mpf_clear(temp);
+    return d;
+  }
+
+  Safefree(buf);
+  return mpf_get_d(*p);
+
+}
+
 SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
@@ -2791,7 +2956,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      long double ret;
      mpf_t t, d;
 
-     msd = mpf_get_d_rndn(*x);
+     msd = Rmpf_get_d_rndn(x);
 
      if(msd == 0.0 || msd != msd || msd / msd != 1)
        return newSVnv((long double)msd);
@@ -2805,7 +2970,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      mpf_sub(t, t, d);
      mpf_clear(d);
 
-     lsd = mpf_get_d_rndn(t);
+     lsd = Rmpf_get_d_rndn(&t);
 
      mpf_clear(t);
 
@@ -3060,247 +3225,16 @@ int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
 #endif
 }
 
-/*************************************************
-_cut_off:
-
-First 3 args are as for _rndaz (below). If the 4th arg is
-true, the bit index of the least significant bit of the given
-value (when converted to a double) is printed to STDOUT.
-Returns an integer x, representing that bit plus the next 11
-bits.
-To view those bits:
- printf "%011b", $x;
-
-*************************************************/
-
-int _cut_off(char *a, IV exponent, UV prec, int display) {
-  int ret = 0, i, ulp_pos, add_on = 1024, min_prec, low_subnormal_exp, high_subnormal_exp;
-
-#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && REQUIRED_LDBL_MANT_DIG == 2098)
-  ulp_pos = 52;
-  min_prec = 64;
-  low_subnormal_exp = -1074;
-  high_subnormal_exp = -1021;
-
-#elif defined(NV_IS_LONG_DOUBLE)
-  ulp_pos = REQUIRED_LDBL_MANT_DIG - 1;
-  if(ulp_pos == 63) {
-    min_prec = 96;
-    low_subnormal_exp = -16445 ;
-    high_subnormal_exp = -16381 ;
-  }
-  else {
-    if(ulp_pos != 112) croak("In _cut_off, ulp_pos has been set to an insane value (%d)", ulp_pos);
-    min_prec = 128;
-    low_subnormal_exp = -16494 ;
-    high_subnormal_exp = -16381 ;
-  }
-
-#elif defined(NV_IS_FLOAT128)
-    ulp_pos = 112;
-    min_prec = 128;
-    low_subnormal_exp = -16494 ;
-    high_subnormal_exp = -16381 ;
-
-#else
-  croak("In _cut_off, cannot determine the NV type");
-#endif
-
-  if(prec < min_prec) {
-    warn("3rd arg (prec = %u) supplied to Math::GMPf::_cut_off is < %u", prec, min_prec);
-    return 0;
-  }
-
-  if(exponent < low_subnormal_exp) return 0;
-  if(exponent < high_subnormal_exp) ulp_pos -= high_subnormal_exp - exponent;
-  if(a[0] == '-' || a[0] == '+') ++ulp_pos;
-
-  if(display) printf("len: %u ULP index: %d\n", strlen(a), ulp_pos);
-
-  for(i = 0; i < 11; ++i) {
-    if(a[ulp_pos + 1] == '1') ret += add_on;
-    add_on >>= 1;
-  }
-
-  return ret;
-}
-
-
-/************************************************
-
-_rndaz:
-
-The Rmpf_get_d function rounds towards zero (because this is what
-mpf_get_d does.
-If you prefer rounding to nearest, ties to even, then instead use
-Rmpf_get_d_rndn.
-
-For some values/precisions Rmpf_get_d and Rmpf_get_d_rndn will
-return the same double. For other values/precisions there will be
-a discrepancy of 1 unit of least precision (1 ULP).
-
-The _rndaz function merely tells us whether Rmpf_get_d_rndn and
-Rmpf_get_d will return the same double (or not).
-
-_rndaz takes 4 arguments:
- 1) a base 2 representation of the mantissa of the Math::GMPf
-    object - with implied radix point to the left of the first
-    digit;
- 2) the exponent of the Math::GMPf object;
- 3) the precision (no. of bits) of the Math::GMPf object;
- 4) a boolean (integer) argument
-
-The first 2 arguments are returned by Rmpf_deref2, the third by
-Rmpf_get_prec.
-If the 4th argument is true, then the length of the binary string,
-and the index of the ULP, will be printed to STDOUT.
-
-If '0' is returned, then Rmpf_get_d and Rmpf_get_d_rndn will return
-identical doubles.
-
-If '1' is returned, then there will be a 1 ULP discrepancy in the
-respective doubles.
-
-I think there's a problem with Rmpf_set_d and/or Rmpf_set_str that
-can cause some strange results - though it rarely raises its head.
-But this will need to be looked at separately. Here, we are concerned
-solely with Rmpf_get_d.
-
-************************************************/
-
-int _rndaz(char *a, IV exponent, UV prec, int display) {
-  size_t len;
-  int i, min_prec, low_subnormal_exp, high_subnormal_exp, ulp_pos;
-
-#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && (REQUIRED_LDBL_MANT_DIG == 2098 || REQUIRED_LDBL_MANT_DIG == 53))
-  ulp_pos = 52;
-  min_prec = 64;
-  low_subnormal_exp = -1074;
-  high_subnormal_exp = -1021;
-
-#elif defined(NV_IS_LONG_DOUBLE)
-  ulp_pos = REQUIRED_LDBL_MANT_DIG - 1;
-  if(ulp_pos == 63) {
-    min_prec = 96;
-    low_subnormal_exp = -16445 ;
-    high_subnormal_exp = -16381 ;
-  }
-  else {
-    if(ulp_pos != 112) croak("In _rndaz, ulp_pos has been set to an insane value (%d)", ulp_pos);
-    min_prec = 128;
-    low_subnormal_exp = -16494 ;
-    high_subnormal_exp = -16381 ;
-  }
-
-#elif defined(NV_IS_FLOAT128)
-    ulp_pos = 112;
-    min_prec = 128;
-    low_subnormal_exp = -16494 ;
-    high_subnormal_exp = -16381 ;
-
-#else
-  croak("In _rndaz, cannot determine the NV type");
-#endif
-
-  if(exponent < low_subnormal_exp) return 0;
-
-  if(exponent < high_subnormal_exp) ulp_pos -= high_subnormal_exp - exponent;
-
-  len = strlen(a);
-
-  if(a[0] == '-' || a[0] == '+') ++ulp_pos;
-
-  if(len <= ulp_pos + 1) return 0;          /* no rounding required */
-
-  if(display) printf("len: %u ULP index: %d\n", len, ulp_pos);
-
-  if(a[ulp_pos + 1] == '0') return 0;       /* no rounding required */
-
-  /* will get to here only if a[ulp_pos + 1] == '1' */
-
-  if(a[ulp_pos] == '1') return 1; /* rnda */
-
-  if(len > ulp_pos + 2) {
-
-    for(i = ulp_pos + 2; i < len; ++i) {
-      if(a[i] == '1') return 1;         /* rnda */
-    }
-  }
-
-  return 0;                             /* no rounding required */
-}
-
-/* char * mpf_get_str (char *str, mp_exp_t *expptr, int base, size_t n_digits, const mpf_t op) */
-
-double Rmpf_get_d_rndn(mpf_t * p) {
-  char * buf;
-  mp_exp_t exponent;
-  size_t n_digits;
-  mpf_t temp, dbl_min;
-  double d;
-
-  n_digits = (size_t)mpf_get_prec(*p);
-
-  Newxz(buf, n_digits + 2, char);
-
-  mpf_get_str(buf, &exponent, 2, n_digits, *p);
-
-  /* printf("exponent: %d\n", exponent); */
-
-  if(_rndaz(buf, (IV)exponent, (UV)n_digits, 0)) {
-    /* printf("ROUNDING AWAY FROM ZERO\n"); */
-    Safefree(buf);
-    mpf_init2(temp, n_digits);
-    mpf_set_ui(temp, 1);
-    if(exponent <= 53) mpf_div_2exp(temp, temp, 53 - exponent);
-    else mpf_mul_2exp(temp, temp, exponent - 53);
-
-    /***********************************************
-
-    For the (subnormal) exponent range -1074 ..-1021, rounding away
-    from zero will be achieved by simply adding the smallest
-    representable (subnormal) value (0.1e-1073)
-
-    ***********************************************/
-
-    if(exponent < -1021 && exponent > -1075) { /* handle subnormal doubles */
-      mpf_init2(dbl_min, 64);
-      mpf_set_ui(dbl_min, 1);
-
-      mpf_div_2exp(dbl_min, dbl_min, 1074); /*********************************
-                                             dbl_min set to smallest non-zero
-                                             positive (subnormal) value
-                                             ********************************/
-
-      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, dbl_min);
-      else mpf_sub(temp, *p, dbl_min);
-      mpf_clear(dbl_min);
-    }
-    else { /* handle normal doubles */
-      if(mpf_sgn(*p) > 0) mpf_add(temp, *p, temp);
-      else mpf_sub(temp, *p, temp);
-    }
-
-    d = mpf_get_d(temp);
-    mpf_clear(temp);
-    return d;
-  }
-
-  Safefree(buf);
-  return mpf_get_d(*p);
-
-}
-
 SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
+#if defined(NV_IS_LONG_DOUBLE)
 #if REQUIRED_LDBL_MANT_DIG == 2098
 
      double msd, lsd;
      long double ret;
      mpf_t t, d;
 
-     msd = mpf_get_d_rndn(*x);
+     msd = Rmpf_get_d_rndn(x);
 
      if(msd == 0.0 || msd != msd || msd / msd != 1)
        return newSVnv((long double)msd);
@@ -3314,7 +3248,7 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
      mpf_sub(t, t, d);
      mpf_clear(d);
 
-     lsd = mpf_get_d_rndn(t);
+     lsd = Rmpf_get_d_rndn(&t);
 
      mpf_clear(t);
 
@@ -3324,16 +3258,17 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
 #else
 #if REQUIRED_LDBL_MANT_DIG == 53
-     long low_subnormal_exp = -1074, high_subnormal_exp = -1021;
+     int low_subnormal_exp = -1074, high_subnormal_exp = -1021;
 #elif REQUIRED_LDBL_MANT_DIG == 64
-     long low_subnormal_exp = -16445, high_subnormal_exp = -16381;
+     int low_subnormal_exp = -16445, high_subnormal_exp = -16381;
+#elif REQUIRED_LDBL_MANT_DIG == 113
+     int low_subnormal_exp = -16494, high_subnormal_exp = -16381;
 #else
-     long low_subnormal_exp = -16494, high_subnormal_exp = -16381;
+     croak("Unknown long double type in _Rmpf_get_ld_rndn");
 #endif
      mpf_t t, ldbl_min;
      size_t n_digits;
      long i, exp, retract = 0;
-     int subnormal = 0;
      char *out;
      long double ret = 0.0L, sign = 1.0L;
      long double add_on[113] = {
@@ -3386,7 +3321,6 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
        else mpf_mul_2exp(t, t, exp - REQUIRED_LDBL_MANT_DIG);
 
        if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
-         subnormal = 1;
          mpf_init2(ldbl_min, 64);
          mpf_set_ui(ldbl_min, 1);
          mpf_div_2exp(ldbl_min, ldbl_min, (low_subnormal_exp - 1)  * -1);
@@ -3445,11 +3379,128 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
 }
 
+SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
+
+#if defined(NV_IS_FLOAT128)
+
+     int low_subnormal_exp = -16494, high_subnormal_exp = -16381;
+     mpf_t t, f128_min;
+     size_t n_digits;
+     long i, exp, retract = 0;
+     char *out;
+     float128 ret = 0.0Q, sign = 1.0Q;
+     float128 add_on[113] = {
+      5192296858534827628530496329220096e0Q, 2596148429267413814265248164610048e0Q,
+      1298074214633706907132624082305024e0Q, 649037107316853453566312041152512e0Q,
+      324518553658426726783156020576256e0Q, 162259276829213363391578010288128e0Q,
+      81129638414606681695789005144064e0Q, 40564819207303340847894502572032e0Q,
+      20282409603651670423947251286016e0Q, 10141204801825835211973625643008e0Q,
+      5070602400912917605986812821504e0Q, 2535301200456458802993406410752e0Q,
+      1267650600228229401496703205376e0Q, 633825300114114700748351602688e0Q,
+      316912650057057350374175801344e0Q, 158456325028528675187087900672e0Q, 79228162514264337593543950336e0Q,
+      39614081257132168796771975168e0Q, 19807040628566084398385987584e0Q, 9903520314283042199192993792e0Q,
+      4951760157141521099596496896e0Q, 2475880078570760549798248448e0Q, 1237940039285380274899124224e0Q,
+      618970019642690137449562112e0Q, 309485009821345068724781056e0Q, 154742504910672534362390528e0Q,
+      77371252455336267181195264e0Q, 38685626227668133590597632e0Q, 19342813113834066795298816e0Q,
+      9671406556917033397649408e0Q, 4835703278458516698824704e0Q, 2417851639229258349412352e0Q,
+      1208925819614629174706176e0Q, 604462909807314587353088e0Q, 302231454903657293676544e0Q,
+      151115727451828646838272e0Q, 75557863725914323419136e0Q, 37778931862957161709568e0Q,
+      18889465931478580854784e0Q, 9444732965739290427392e0Q, 4722366482869645213696e0Q,
+      2361183241434822606848e0Q, 1180591620717411303424e0Q, 590295810358705651712e0Q, 295147905179352825856e0Q,
+      147573952589676412928e0Q, 73786976294838206464e0Q, 36893488147419103232e0Q, 18446744073709551616e0Q,
+      9223372036854775808e0Q, 4611686018427387904e0Q, 2305843009213693952e0Q, 1152921504606846976e0Q,
+      576460752303423488e0Q, 288230376151711744e0Q, 144115188075855872e0Q, 72057594037927936e0Q,
+      36028797018963968e0Q, 18014398509481984e0Q, 9007199254740992e0Q, 4503599627370496e0Q,
+      2251799813685248e0Q, 1125899906842624e0Q, 562949953421312e0Q, 281474976710656e0Q, 140737488355328e0Q,
+      70368744177664e0Q, 35184372088832e0Q, 17592186044416e0Q, 8796093022208e0Q, 4398046511104e0Q,
+      2199023255552e0Q, 1099511627776e0Q, 549755813888e0Q, 274877906944e0Q, 137438953472e0Q, 68719476736e0Q,
+      34359738368e0Q, 17179869184e0Q, 8589934592e0Q, 4294967296e0Q, 2147483648e0Q, 1073741824e0Q, 536870912e0Q,
+      268435456e0Q, 134217728e0Q, 67108864e0Q, 33554432e0Q, 16777216e0Q, 8388608e0Q, 4194304e0Q, 2097152e0Q,
+      1048576e0Q, 524288e0Q, 262144e0Q, 131072e0Q, 65536e0Q, 32768e0Q, 16384e0Q, 8192e0Q, 4096e0Q, 2048e0Q,
+      1024e0Q, 512e0Q, 256e0Q, 128e0Q, 64e0Q, 32e0Q, 16e0Q, 8e0Q, 4e0Q, 2e0Q, 1e0Q };
+
+     n_digits = (size_t)mpf_get_prec(*x);
+
+     if(n_digits < 128) mpf_init2(t, 128);
+     else mpf_init2(t, n_digits);
+
+     n_digits = mpf_get_prec(t);
+
+     mpf_set(t, *x);
+
+     Newxz(out, n_digits + 2, char);
+     if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_float128_rndn function");
+
+     mpf_get_str(out, &exp, 2, n_digits, t);
+
+     if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
+       mpf_set_ui(t, 1);
+       if(exp <= 113) mpf_div_2exp(t, t, 113 - exp);
+       else mpf_mul_2exp(t, t, exp - 113);
+
+       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
+         mpf_init2(f128_min, 64);
+         mpf_set_ui(f128_min, 1);
+         mpf_div_2exp(f128_min, f128_min, (low_subnormal_exp - 1)  * -1);
+
+         if(mpf_sgn(*x) > 0) mpf_add(t, *x, f128_min);
+         else mpf_sub(t, *x, f128_min);
+         mpf_clear(f128_min);
+       }
+       else { /* handle normal doubles */
+         if(mpf_sgn(*x) > 0) mpf_add(t, *x, t);
+         else mpf_sub(t, *x, t);
+       }
+
+       mpf_get_str(out, &exp, 2, n_digits, t); /* overwrite out with the corrected value */
+
+     }
+
+     mpf_clear(t);
+
+     if(out[0] == '-') {
+       sign = -1.0Q;
+       out++;
+       retract++;
+     }
+     else {
+       if(out[0] == '+') {
+         out++;
+         retract++;
+       }
+     }
+
+     for(i = 0; i < 113; i++) {
+       if(out[i] == '1') ret += add_on[i];
+     }
+
+     if(retract) out--;
+     Safefree(out);
+
+     if(exp > 113) {
+       retract = exp - 113; /* re-using 'retract' */
+       for(i = 0; i < retract; i++) ret *= 2.0Q;
+     }
+
+     if(exp < 113) {
+       for(i = exp; i < 113; i++) ret /= 2.0Q;
+     }
+
+     return newSVnv(ret * sign);
+
+#else
+
+     croak("_Rmpf_get_float128_rndn not implemented for this build of Math::GMPf");
+
+#endif
+
+}
+
 SV * Rmpf_get_NV_rndn(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_FLOAT128)
 
-     return _Rmpf_get_float128(aTHX_ x);
+     return _Rmpf_get_float128_rndn(aTHX_ x);
 
 #elif defined(NV_IS_LONG_DOUBLE)
 
@@ -4931,6 +4982,17 @@ CODE:
   RETVAL = _Rmpf_get_float128 (aTHX_ x);
 OUTPUT:  RETVAL
 
+int
+_rndaz (a, exponent, prec, display)
+	char *	a
+	IV	exponent
+	UV	prec
+	int	display
+
+double
+Rmpf_get_d_rndn (p)
+	mpf_t *	p
+
 SV *
 _Rmpf_get_ld (x)
 	mpf_t *	x
@@ -5008,29 +5070,18 @@ CODE:
   RETVAL = Rmpf_fits_UV_p (aTHX_ n);
 OUTPUT:  RETVAL
 
-int
-_cut_off (a, exponent, prec, display)
-	char *	a
-	IV	exponent
-	UV	prec
-	int	display
-
-int
-_rndaz (a, exponent, prec, display)
-	char *	a
-	IV	exponent
-	UV	prec
-	int	display
-
-double
-Rmpf_get_d_rndn (p)
-	mpf_t *	p
-
 SV *
 _Rmpf_get_ld_rndn (x)
 	mpf_t *	x
 CODE:
   RETVAL = _Rmpf_get_ld_rndn (aTHX_ x);
+OUTPUT:  RETVAL
+
+SV *
+_Rmpf_get_float128_rndn (x)
+	mpf_t *	x
+CODE:
+  RETVAL = _Rmpf_get_float128_rndn (aTHX_ x);
 OUTPUT:  RETVAL
 
 SV *
