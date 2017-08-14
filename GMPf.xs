@@ -3471,6 +3471,9 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
        }
      }
 
+     if(exp > -16494 && exp < -16381)
+       bits = exp + 16494;
+
      for(i = 0; i < bits; i++) {
        if(out[i] == '1') ret += add_on[i];
        if(out[i] == 0) break; /* end of string - GMP doesn't return trailing zeroes, but chars beyond
