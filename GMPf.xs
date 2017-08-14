@@ -2758,6 +2758,7 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
      for(i = 0; i < 113; i++) {
        if(out[i] == '1') ret += add_on[i];
+       if(out[i] == 0) break; /* end of string */
      }
 
      if(retract) out--;
@@ -3037,6 +3038,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 
      for(i = 0; i < REQUIRED_LDBL_MANT_DIG; i++) {
        if(out[i] == '1') ret += add_on[i];
+       if(out[1] == 0) break; /* end of string */
      }
 
      if(retract) out--;
