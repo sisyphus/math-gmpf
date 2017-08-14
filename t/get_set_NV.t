@@ -6,7 +6,7 @@ print "1..10\n";
 
 my $prec;
 
-$prec = 2112; # Cover precisions of all NV's
+$prec = 128; # Cover precisions of all NV's
 
 Rmpf_set_default_prec ($prec);
 
@@ -129,13 +129,16 @@ Math::MPFR::Rmpfr_set_default_prec($prec);
 
 my $print_err = 0;
 
-for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16442..-16380, -16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
   my $str = random_string($prec) . "e$_";
 
   my $mpf  = Math::GMPf->new($str, -2);
   my $mpfr = Math::MPFR->new($str,  2);
 
   my $mpf_d  = Rmpf_get_NV_rndn($mpf);
+
   my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);  # Round towards nearest, ties to even.
 
   if($mpf_d != $mpfr_d) {
@@ -144,9 +147,12 @@ for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..1
     my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
     if($print_err < 2) { # give specifics for first 2 errors only.
       warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
+      printf("GMPf: %La\n", $mpf_d) if Math::MPFR::_nv_is_float128();
+      printf("MPFR: %La\n", $mpfr_d) if Math::MPFR::_nv_is_float128();
       warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
       my @args = Rmpf_deref2($mpf, 2, $prec);
       my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
+      Math::MPFR::Rmpfr_dump($mpfr);
       print $rndaz, "\n";
       $print_err++;
     }
@@ -155,6 +161,8 @@ for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..1
 
 if($ok) {print "ok 9\n"}
 else    {print "not ok 9\n"}
+
+$ok = 1;
 
 $prec = 64;
 
@@ -165,13 +173,18 @@ warn "\n# Precision: $prec\n";
 
 $print_err = 0;
 
-for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16442..-16380, -16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
   my $str = random_string($prec) . "e$_";
+
+#for my $str('0.1e-16493', '-0.101e-16493', '0.1011e-16493', '0.11e-16493') {
 
   my $mpf  = Math::GMPf->new($str, -2);
   my $mpfr = Math::MPFR->new($str,  2);
 
   my $mpf_d  = Rmpf_get_NV_rndn($mpf);
+
   my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);  # Round towards nearest, ties to even.
 
   if($mpf_d != $mpfr_d) {
@@ -180,9 +193,12 @@ for(-16500..-16446, -16381.. -16300, -1100..-950, -200..200, 900..1050, 16400..1
     my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
     if($print_err < 2) { # give specifics for first 2 errors only.
       warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
+      printf("GMPf: %La\n", $mpf_d) if Math::MPFR::_nv_is_float128();
+      printf("MPFR: %La\n", $mpfr_d) if Math::MPFR::_nv_is_float128();
       warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
       my @args = Rmpf_deref2($mpf, 2, $prec);
       my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
+      Math::MPFR::Rmpfr_dump($mpfr);
       print $rndaz, "\n";
       $print_err++;
     }
