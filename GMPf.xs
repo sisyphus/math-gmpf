@@ -3316,9 +3316,6 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
      mpf_get_str(out, &exp, 2, n_digits, t);
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
-       mpf_set_ui(t, 1);
-       if(exp <= REQUIRED_LDBL_MANT_DIG) mpf_div_2exp(t, t, REQUIRED_LDBL_MANT_DIG - exp);
-       else mpf_mul_2exp(t, t, exp - REQUIRED_LDBL_MANT_DIG);
 
        if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
          mpf_init2(ldbl_min, 64);
@@ -3330,6 +3327,9 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
          mpf_clear(ldbl_min);
        }
        else { /* handle normal doubles */
+         mpf_set_ui(t, 1);
+         if(exp <= REQUIRED_LDBL_MANT_DIG) mpf_div_2exp(t, t, REQUIRED_LDBL_MANT_DIG - exp);
+         else mpf_mul_2exp(t, t, exp - REQUIRED_LDBL_MANT_DIG);
          if(mpf_sgn(*x) > 0) mpf_add(t, *x, t);
          else mpf_sub(t, *x, t);
        }
@@ -3354,6 +3354,8 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
      for(i = 0; i < REQUIRED_LDBL_MANT_DIG; i++) {
        if(out[i] == '1') ret += add_on[i];
+       if(out[i] == 0) break; /* end of string - GMP doesn't return trailing zeroes, but chars beyond
+                                 the terminating NULL can be '1' */
      }
 
      if(retract) out--;
@@ -3386,7 +3388,7 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
      int low_subnormal_exp = -16494, high_subnormal_exp = -16381;
      mpf_t t, f128_min;
      size_t n_digits;
-     long i, exp, retract = 0;
+     long i, exp, retract = 0, bits = 113;
      char *out;
      float128 ret = 0.0Q, sign = 1.0Q;
      float128 add_on[113] = {
@@ -3434,10 +3436,6 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
      mpf_get_str(out, &exp, 2, n_digits, t);
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
-       mpf_set_ui(t, 1);
-       if(exp <= 113) mpf_div_2exp(t, t, 113 - exp);
-       else mpf_mul_2exp(t, t, exp - 113);
-
        if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
          mpf_init2(f128_min, 64);
          mpf_set_ui(f128_min, 1);
@@ -3448,6 +3446,9 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
          mpf_clear(f128_min);
        }
        else { /* handle normal doubles */
+         mpf_set_ui(t, 1);
+         if(exp <= 113) mpf_div_2exp(t, t, 113 - exp);
+         else mpf_mul_2exp(t, t, exp - 113);
          if(mpf_sgn(*x) > 0) mpf_add(t, *x, t);
          else mpf_sub(t, *x, t);
        }
@@ -3470,8 +3471,10 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
        }
      }
 
-     for(i = 0; i < 113; i++) {
+     for(i = 0; i < bits; i++) {
        if(out[i] == '1') ret += add_on[i];
+       if(out[i] == 0) break; /* end of string - GMP doesn't return trailing zeroes, but chars beyond
+                                 the terminating NULL can be '1' */
      }
 
      if(retract) out--;
