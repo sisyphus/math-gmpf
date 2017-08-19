@@ -3319,7 +3319,7 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
 
-       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
+       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal values */
          mpf_init2(ldbl_min, 64);
          mpf_set_ui(ldbl_min, 1);
          mpf_div_2exp(ldbl_min, ldbl_min, (low_subnormal_exp - 1)  * -1);
@@ -3438,7 +3438,7 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
      mpf_get_str(out, &exp, 2, n_digits, t);
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
-       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal doubles */
+       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal values */
          mpf_init2(f128_min, 64);
          mpf_set_ui(f128_min, 1);
          mpf_div_2exp(f128_min, f128_min, (low_subnormal_exp - 1)  * -1);
