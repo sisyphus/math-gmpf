@@ -2742,6 +2742,8 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, 113, t);
 
+     if(exp < -16493) return newSVnv(0.0Q);
+
      mpf_clear(t);
 
      if(out[0] == '-') {
@@ -2764,15 +2766,15 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
      if(retract) out--;
      Safefree(out);
 
-     if(exp > 113) {
-       retract = exp - 113; /* re-using 'retract' */
-       for(i = 0; i < retract; i++) ret *= 2.0Q;
+     /* re-using the 'i' variable */
+     i = exp < -16381 ? exp + 16381 : 0;	/* function has already returned if exp < -16493 */
+
+     if(i) { 				/* powq(2.0Q, exp) will be zero - so do the calculation in 2 steps */
+       ret *= powq(2.0Q, i);
+       exp -= i;			/* exp += abs(i) */
      }
 
-     if(exp < 113) {
-       for(i = exp; i < 113; i++) ret /= 2.0Q;
-     }
-
+     ret *= powq(2.0Q, exp - 113);
      return newSVnv(ret * sign);
 
 #else
@@ -3387,7 +3389,6 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_FLOAT128)
 
-     int low_subnormal_exp = -16494, high_subnormal_exp = -16381;
      mpf_t t, f128_min;
      size_t n_digits;
      long i, exp, retract = 0, bits = 113;
@@ -3437,11 +3438,13 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, n_digits, t);
 
+     if(exp < -16494) return newSVnv(0.0Q);
+
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
-       if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal values */
+       if(exp < -16381 && exp > -16495) { /* handle subnormal values */
          mpf_init2(f128_min, 64);
          mpf_set_ui(f128_min, 1);
-         mpf_div_2exp(f128_min, f128_min, (low_subnormal_exp - 1)  * -1);
+         mpf_div_2exp(f128_min, f128_min, 16495);
 
          if(mpf_sgn(*x) > 0) mpf_add(t, *x, f128_min);
          else mpf_sub(t, *x, f128_min);
@@ -3485,15 +3488,15 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
      if(retract) out--;
      Safefree(out);
 
-     if(exp > 113) {
-       retract = exp - 113; /* re-using 'retract' */
-       for(i = 0; i < retract; i++) ret *= 2.0Q;
+     /* re-using the 'bits' variable */
+     bits = exp < -16381 ? exp + 16381 : 0;	/* function has already returned if exp < -16494 */
+
+     if(bits) { 			/* powq(2.0Q, exp) will be zero - so do the calculation in 2 steps */
+       ret *= powq(2.0Q, bits);
+       exp -= bits;			/* exp += abs(bits) */
      }
 
-     if(exp < 113) {
-       for(i = exp; i < 113; i++) ret /= 2.0Q;
-     }
-
+     ret *= powq(2.0Q, exp - 113);
      return newSVnv(ret * sign);
 
 #else
