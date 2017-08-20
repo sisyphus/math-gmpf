@@ -1,10 +1,24 @@
 use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
+use Config;
+use POSIX;
 
-print "1..10\n";
+print "1..12\n";
 
-my $prec;
+my ($prec, $nv_max);
+
+if($Config{nvtype} eq 'double') {
+  $nv_max = POSIX::DBL_MAX;
+  $nv_max = 1.7976931348623157e308 unless $nv_max;
+}
+else {
+  $nv_max = POSIX::LDBL_MAX;
+  unless($nv_max) {
+    if($Config{nvsize} == 8) {$nv_max = 1.7976931348623157e308}
+    else {$nv_max = 1.18973149535723176508575932662800702e4932}
+  }
+}
 
 $prec = 128; # Cover precisions of all NV's
 
@@ -145,10 +159,16 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
     $ok = 0;
     my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
     my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
-    if($print_err < 2) { # give specifics for first 2 errors only.
+    if($print_err < 6) { # give specifics for first 6 errors only.
       warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
-      printf("GMPf: %La\n", $mpf_d) if Math::MPFR::_nv_is_float128();
-      printf("MPFR: %La\n", $mpfr_d) if Math::MPFR::_nv_is_float128();
+      if($Config{nvtype} eq 'double') {
+        printf "GMPf: %a\n", $mpf_d;
+        printf "MPFR: %a\n", $mpfr_d;
+      }
+      else {
+        printf "GMPf: %La\n", $mpf_d;
+        printf "MPFR: %La\n", $mpfr_d;
+      }
       warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
       my @args = Rmpf_deref2($mpf, 2, $prec);
       my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
@@ -164,6 +184,63 @@ else    {print "not ok 9\n"}
 
 $ok = 1;
 
+$print_err = 0;
+
+for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(900..1050, 16400..16600) {
+#for(-16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+  my $str = random_string($prec) . "e$_";
+
+  my $mpf  = Math::GMPf->new($str, -2);
+  my $mpfr = Math::MPFR->new();
+  Math::MPFR::Rmpfr_set_str($mpfr, $str, 2, 1); # Round towards zero.
+
+  my $mpf_d  = Rmpf_get_NV($mpf);
+
+  my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 1);  # Round towards zero.
+
+  # For nvtype eg 'double' or 'long double', finite mpfr values gt $nv_max or lt $nv_max * -1
+  # require special handling for the sake of these tests. Under RNDZ, mpfr_get_d will always
+  # return $nv_max for such values.
+
+  if($Config{nvtype} eq 'double' || $Config{nvtype} eq 'long double') {
+    if($mpfr > $nv_max) {
+      Math::MPFR::Rmpfr_set_inf($mpfr, 1);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+    }
+    if($mpfr < $nv_max * -1.0) {
+      Math::MPFR::Rmpfr_set_inf($mpfr, -1);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+    }
+  }
+
+  if($mpf_d != $mpfr_d) {
+    $ok = 0;
+    my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
+    my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
+    if($print_err < 20) { # give specifics for first 6 errors only.
+      warn "GMPf: $mpf_d\nMPFR: $mpfr_d\n";
+      warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
+      if($Config{nvtype} eq 'double') {
+        printf "GMPf: %a\n", $mpf_d;
+        printf "MPFR: %a\n", $mpfr_d;
+      }
+      else {
+        printf "GMPf: %La\n", $mpf_d;
+        printf "MPFR: %La\n", $mpfr_d;
+      }
+      warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+      Math::MPFR::Rmpfr_dump($mpfr);
+      $print_err++;
+    }
+  }
+}
+
+if($ok) {print "ok 10\n"}
+else    {print "not ok 10\n"}
+
+$ok = 1;
+
 $prec = 64;
 
 Rmpf_set_default_prec ($prec);
@@ -173,13 +250,11 @@ warn "\n# Precision: $prec\n";
 
 $print_err = 0;
 
-for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
-#for(-16442..-16380, -16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
+for(-16442..-16380, -16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
 #for(-16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+
   my $str = random_string($prec) . "e$_";
-
-#for my $str('0.1e-16493', '-0.101e-16493', '0.1011e-16493', '0.11e-16493') {
-
   my $mpf  = Math::GMPf->new($str, -2);
   my $mpfr = Math::MPFR->new($str,  2);
 
@@ -191,10 +266,17 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
     $ok = 0;
     my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
     my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
-    if($print_err < 2) { # give specifics for first 2 errors only.
+    if($print_err < 6) { # give specifics for first 6 errors only.
+      warn "GMPf: $mpf_d\nMPFR: $mpfr_d\n";
       warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
-      printf("GMPf: %La\n", $mpf_d) if Math::MPFR::_nv_is_float128();
-      printf("MPFR: %La\n", $mpfr_d) if Math::MPFR::_nv_is_float128();
+      if($Config{nvtype} eq 'double') {
+        printf "GMPf: %a\n", $mpf_d;
+        printf "MPFR: %a\n", $mpfr_d;
+      }
+      else {
+        printf "GMPf: %La\n", $mpf_d;
+        printf "MPFR: %La\n", $mpfr_d;
+      }
       warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
       my @args = Rmpf_deref2($mpf, 2, $prec);
       my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
@@ -205,8 +287,63 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
   }
 }
 
-if($ok) {print "ok 10\n"}
-else    {print "not ok 10\n"}
+if($ok) {print "ok 11\n"}
+else    {print "not ok 11\n"}
+
+$ok = 1;
+
+$print_err = 0;
+
+for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16442..-16380, -16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+#for(-16381..-16300, -1100..-950, -200..200, 900..1050, 16400..16600) {
+  my $str = random_string($prec) . "e$_";
+
+  my $mpf  = Math::GMPf->new($str, -2);
+  my $mpfr = Math::MPFR->new($str,  2);
+
+  my $mpf_d  = Rmpf_get_NV($mpf);
+
+  my $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 1);  # Round towards zero.
+
+  # For nvtype eg 'double' or 'long double', finite mpfr values gt $nv_max or lt $nv_max * -1
+  # require special handling for the sake of these tests. Under RNDZ, mpfr_get_d will always
+  # return $nv_max for such values.
+
+  if($Config{nvtype} eq 'double' || $Config{nvtype} eq 'long double') {
+    if($mpfr > $nv_max) {
+      Math::MPFR::Rmpfr_set_inf($mpfr, 1);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+    }
+    if($mpfr < $nv_max * -1.0) {
+      Math::MPFR::Rmpfr_set_inf($mpfr, -1);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+    }
+  }
+
+  if($mpf_d != $mpfr_d) {
+    $ok = 0;
+    my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
+    my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
+    if($print_err < 6) { # give specifics for first 6 errors only.
+      warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
+      if($Config{nvtype} eq 'double') {
+        printf "GMPf: %a\n", $mpf_d;
+        printf "MPFR: %a\n", $mpfr_d;
+      }
+      else {
+        printf "GMPf: %La\n", $mpf_d;
+        printf "MPFR: %La\n", $mpfr_d;
+      }
+      warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+      Math::MPFR::Rmpfr_dump($mpfr);
+      $print_err++;
+    }
+  }
+}
+
+if($ok) {print "ok 12\n"}
+else    {print "not ok 12\n"}
 
 sub random_string {
   my $ret = '';
