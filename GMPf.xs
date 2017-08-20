@@ -3272,7 +3272,7 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 #endif
      mpf_t t, ldbl_min;
      size_t n_digits;
-     long i, exp, retract = 0;
+     long i, exp, retract = 0, bits = REQUIRED_LDBL_MANT_DIG;
      char *out;
      long double ret = 0.0L, sign = 1.0L;
      long double add_on[113] = {
@@ -3319,6 +3319,8 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, n_digits, t);
 
+     if(exp < low_subnormal_exp) return newSVnv(0.0L);
+
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
 
        if(exp < high_subnormal_exp && exp > low_subnormal_exp - 1) { /* handle subnormal values */
@@ -3356,7 +3358,10 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
        }
      }
 
-     for(i = 0; i < REQUIRED_LDBL_MANT_DIG; i++) {
+     if(exp > low_subnormal_exp && exp < high_subnormal_exp)
+       bits = exp - low_subnormal_exp;
+
+     for(i = 0; i < bits; i++) {
        if(out[i] == '1') ret += add_on[i];
        if(out[i] == 0) break; /* end of string - GMP doesn't return trailing zeroes, but chars beyond
                                  the terminating NULL can be '1' */
@@ -3365,15 +3370,17 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
      if(retract) out--;
      Safefree(out);
 
-     if(exp > 113) {
-       retract = exp - 113; /* re-using 'retract' */
-       for(i = 0; i < retract; i++) ret *= 2.0L;
+     i = high_subnormal_exp + 113 - REQUIRED_LDBL_MANT_DIG;
+
+     /* re-using the 'bits' variable */
+     bits = exp < i ? exp - i : 0;	/* function has already returned if exp < low_subnormal_exp */
+
+     if(bits) { 			/* powl(2.0L, exp) will be zero - so do the calculation in 2 steps */
+       ret *= powl(2.0L, bits);
+       exp -= bits;			/* exp += abs(bits) */
      }
 
-     if(exp < 113) {
-       for(i = exp; i < 113; i++) ret /= 2.0L;
-     }
-
+     ret *= powl(2.0L, exp - 113);
      return newSVnv(ret * sign);
 
 #endif
