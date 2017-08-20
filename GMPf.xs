@@ -2742,7 +2742,10 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, 113, t);
 
-     if(exp < -16493) return newSVnv(0.0Q);
+     if(exp < -16493) {
+       Safefree(out);
+       return newSVnv(0.0Q);
+     }
 
      mpf_clear(t);
 
@@ -2982,8 +2985,17 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      return newSVnv(ret);
 
 #else
+#if REQUIRED_LDBL_MANT_DIG == 53
+     int low_subnormal_exp = -1074, high_subnormal_exp = -1021;
+#elif REQUIRED_LDBL_MANT_DIG == 64
+     int low_subnormal_exp = -16445, high_subnormal_exp = -16381;
+#elif REQUIRED_LDBL_MANT_DIG == 113
+     int low_subnormal_exp = -16494, high_subnormal_exp = -16381;
+#else
+     croak("Unknown long double type in _Rmpf_get_ld_rndn");
+#endif
      mpf_t t;
-     long i, exp, retract = 0;
+     long i, exp, retract = 0, bits = REQUIRED_LDBL_MANT_DIG;;
      char *out;
      long double ret = 0.0L, sign = 1.0L;
      long double add_on[113] = {
@@ -3016,13 +3028,18 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
       1048576e0L, 524288e0L, 262144e0L, 131072e0L, 65536e0L, 32768e0L, 16384e0L, 8192e0L, 4096e0L, 2048e0L,
       1024e0L, 512e0L, 256e0L, 128e0L, 64e0L, 32e0L, 16e0L, 8e0L, 4e0L, 2e0L, 1e0L };
 
-     mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
+     mpf_init2(t, mpf_get_prec(*x));
      mpf_set(t, *x);
 
-     Newxz(out, REQUIRED_LDBL_MANT_DIG + 2, char);
+     Newxz(out, mpf_get_prec(t) + 2, char);
      if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
 
      mpf_get_str(out, &exp, 2, REQUIRED_LDBL_MANT_DIG, t);
+
+     if(exp < low_subnormal_exp + 1) {
+       Safefree(out);
+       return newSVnv(0.0L);
+     }
 
      mpf_clear(t);
 
@@ -3038,9 +3055,12 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
        }
      }
 
-     for(i = 0; i < REQUIRED_LDBL_MANT_DIG; i++) {
+     if(exp > low_subnormal_exp && exp < high_subnormal_exp)
+       bits = exp - low_subnormal_exp;
+
+     for(i = 0; i < bits; i++) {
        if(out[i] == '1') ret += add_on[i];
-       if(out[1] == 0) break; /* end of string */
+       if(out[i] == 0) break; /* end of string */
      }
 
      if(retract) out--;
@@ -3319,7 +3339,10 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, n_digits, t);
 
-     if(exp < low_subnormal_exp) return newSVnv(0.0L);
+     if(exp < low_subnormal_exp) {
+       Safefree(out);
+       return newSVnv(0.0L);
+     }
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
 
@@ -3445,7 +3468,10 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, n_digits, t);
 
-     if(exp < -16494) return newSVnv(0.0Q);
+     if(exp < -16494) {
+       Safefree(out);
+       return newSVnv(0.0Q);
+     }
 
      if(_rndaz(out, (IV)exp, (UV)n_digits, 0)) {
        if(exp < -16381 && exp > -16495) { /* handle subnormal values */
