@@ -131,9 +131,11 @@ eval {require Math::MPFR;};
 
 unless($@) {$have_mpfr = 1}
 else {
-  warn "\n Skipping tests 9 and 10\n \$\@: $@";
+  warn "\n Skipping tests 9 to 12\n \$\@: $@";
   print "ok 9\n";
   print "ok 10\n";
+  print "ok 11\n";
+  print "ok 12\n";
   exit 0;
 }
 
@@ -201,16 +203,16 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
 
   # For nvtype eg 'double' or 'long double', finite mpfr values gt $nv_max or lt $nv_max * -1
   # require special handling for the sake of these tests. Under RNDZ, mpfr_get_d will always
-  # return $nv_max for such values.
+  # return $nv_max for such values, but mpf_get_d will always return the infinity.
 
   if($Config{nvtype} eq 'double' || $Config{nvtype} eq 'long double') {
     if($mpfr > $nv_max) {
       Math::MPFR::Rmpfr_set_inf($mpfr, 1);
-      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0); # set $mpfr_d to Inf
     }
     if($mpfr < $nv_max * -1.0) {
       Math::MPFR::Rmpfr_set_inf($mpfr, -1);
-      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0); # set $mpfr_d to -Inf
     }
   }
 
@@ -308,16 +310,16 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
 
   # For nvtype eg 'double' or 'long double', finite mpfr values gt $nv_max or lt $nv_max * -1
   # require special handling for the sake of these tests. Under RNDZ, mpfr_get_d will always
-  # return $nv_max for such values.
+  # return $nv_max for such values, but mpf_get_d returns the infinity.
 
   if($Config{nvtype} eq 'double' || $Config{nvtype} eq 'long double') {
     if($mpfr > $nv_max) {
       Math::MPFR::Rmpfr_set_inf($mpfr, 1);
-      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0); # set $mpfr_d to Inf
     }
     if($mpfr < $nv_max * -1.0) {
       Math::MPFR::Rmpfr_set_inf($mpfr, -1);
-      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0);
+      $mpfr_d = Math::MPFR::Rmpfr_get_NV($mpfr, 0); # set $mpfr_d to Inf
     }
   }
 
