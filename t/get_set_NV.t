@@ -220,7 +220,7 @@ for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
     $ok = 0;
     my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
     my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
-    if($print_err < 20) { # give specifics for first 6 errors only.
+    if($print_err < 6) { # give specifics for first 6 errors only.
       warn "GMPf: $mpf_d\nMPFR: $mpfr_d\n";
       warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
       if($Config{nvtype} eq 'double') {
