@@ -2701,7 +2701,7 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
 #if defined(NV_IS_FLOAT128)
      mpf_t t;
-     long i, exp, retract = 0;
+     long i, exp, retract = 0, bits = 113;
      char *out;
      float128 ret = 0.0Q, sign = 1.0Q;
      float128 add_on[113] = {
@@ -2734,13 +2734,13 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
       1048576e0Q, 524288e0Q, 262144e0Q, 131072e0Q, 65536e0Q, 32768e0Q, 16384e0Q, 8192e0Q, 4096e0Q, 2048e0Q,
       1024e0Q, 512e0Q, 256e0Q, 128e0Q, 64e0Q, 32e0Q, 16e0Q, 8e0Q, 4e0Q, 2e0Q, 1e0Q };
 
-     mpf_init2(t, 113);
+     mpf_init2(t, mpf_get_prec(*x));
      mpf_set(t, *x);
 
-     Newxz(out, 115, char);
+     Newxz(out, mpf_get_prec(t) + 2, char);
      if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_float128 function");
 
-     mpf_get_str(out, &exp, 2, 113, t);
+     mpf_get_str(out, &exp, 2, mpf_get_prec(t), t);
 
      if(exp < -16493) {
        Safefree(out);
@@ -2761,7 +2761,10 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
        }
      }
 
-     for(i = 0; i < 113; i++) {
+     if(exp > -16494 && exp < -16381)
+       bits = exp + 16494;
+
+     for(i = 0; i < bits; i++) {
        if(out[i] == '1') ret += add_on[i];
        if(out[i] == 0) break; /* end of string */
      }
