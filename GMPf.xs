@@ -3034,7 +3034,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      Newxz(out, mpf_get_prec(t) + 2, char);
      if(out == NULL) croak("Failed to allocate memory in _Rmpf_get_ld function");
 
-     mpf_get_str(out, &exp, 2, REQUIRED_LDBL_MANT_DIG, t);
+     mpf_get_str(out, &exp, 2, mpf_get_prec(t), t);
 
      if(exp < low_subnormal_exp + 1) {
        Safefree(out);
@@ -3066,15 +3066,17 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
      if(retract) out--;
      Safefree(out);
 
-     if(exp > 113) {
-       retract = exp - 113; /* re-using 'retract' */
-       for(i = 0; i < retract; i++) ret *= 2.0L;
+     i = high_subnormal_exp + 113 - REQUIRED_LDBL_MANT_DIG;
+
+     /* re-using the 'bits' variable */
+     bits = exp < i ? exp - i : 0;	/* function has already returned if exp < low_subnormal_exp */
+
+     if(bits) { 			/* powl(2.0L, exp) will be zero - so do the calculation in 2 steps */
+       ret *= powl(2.0L, bits);
+       exp -= bits;			/* exp += abs(bits) */
      }
 
-     if(exp < 113) {
-       for(i = exp; i < 113; i++) ret /= 2.0L;
-     }
-
+     ret *= powl(2.0L, exp - 113);
      return newSVnv(ret * sign);
 
 #endif
