@@ -38,27 +38,11 @@ else {
   print "not ok 1\n";
 }
 
-# With double-double arch we get an off-by-one ULP discrepancy in test 2 if we test for
-# equivalence. Therefore we test for "near enough".
-
-if(1e250 != 1e250 + 1e-250) { # We have double-double NV
-
-  my $eps = $nv - Rmpf_get_NV($fi);
-
-  if($eps < 1.3e-85 && $eps >= 0) {print "ok 2\n"}
-  else {
-    warn "\n $nv != ", Rmpf_get_NV($fi), "\n Difference is $eps\n";
-    print "not ok 2\n";
-  }
-}
+if($nv == Rmpf_get_NV_rndn($fi)) {print "ok 2\n"}
 else {
-  if($nv == Rmpf_get_NV($fi)) {print "ok 2\n"}
-  else {
-    warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
-    print "not ok 2\n";
-  }
+  warn "\n $nv != ", Rmpf_get_NV_rndn($fi), "\n";
+  print "not ok 2\n";
 }
-
 
 my $inf = 999**(999**999);
 my $nan = $inf / $inf;
@@ -105,24 +89,10 @@ else {
   print "not ok 7\n";
 }
 
-# With double-double, as for test 2, we also need to test for "near enough" in test 8.
-
-if(1e250 != 1e250 + 1e-250) { # We have double-double NV
-
-  my $eps = $nv - Rmpf_get_NV($fi);
-
-  if($eps > -1.12e43 && $eps <= 0) {print "ok 8\n"}
-  else {
-    warn "\n $nv != ", Rmpf_get_NV($fi), "\n Difference is $eps\n";
-    print "not ok 8\n";
-  }
-}
+if($nv == Rmpf_get_NV_rndn($fi)) {print "ok 8\n"}
 else {
-  if($nv == Rmpf_get_NV($fi)) {print "ok 8\n"}
-  else {
-    warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
-    print "not ok 8\n";
-  }
+  warn "\n $nv != ", Rmpf_get_NV($fi), "\n";
+  print "not ok 8\n";
 }
 
 my $have_mpfr = 0;
