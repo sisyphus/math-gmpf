@@ -79,7 +79,7 @@ fgmp_urandomb_ui fgmp_urandomm_ui
 Rmpf_get_NV Rmpf_set_NV Rmpf_get_NV_rndn Rmpf_get_d_rndn
 Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
     );
-    our $VERSION = '0.43';
+    our $VERSION = '0.44';
     #$VERSION = eval $VERSION;
 
     DynaLoader::bootstrap Math::GMPf $VERSION;
@@ -642,8 +642,8 @@ __END__
    $double = Rmpf_get_d($op);
    $double = Rmpf_get_d_rndn($op)
     Convert $op to a 'double. Rmpf_get_d will truncate if necessary
-   (i.e. round towards zero). Rmpf_get_d_rndn will round to
-   nearest, ties to even.
+    (i.e. round towards zero). Rmpf_get_d_rndn will round to
+    nearest, ties to even.
 
    $NV = Rmpf_get_NV($op);      # $NV is $Config{nvtype}
    $NV = Rmpf_get_NV_rndn($op); # $NV is $Config{nvtype}
