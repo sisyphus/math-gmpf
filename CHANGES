@@ -1,3 +1,5 @@
+0.44
+
 0.43
  - Fix test script bugs (t/NOK_and_POK.t).
  - Re DoubleDouble arch, fix _Rmpf_set_ld and tweak t/get_set_NV.t
