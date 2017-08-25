@@ -24,6 +24,28 @@ _WIN32_BIZARRE_INFNAN    : Defined (on Windows only) when the perl version
                            These earlier perl versions generally stringified
                            NaNs as (-)1.#IND and Infs as (-)1.#INF.
 
+The following are all used by _Rmpf_get_ld/ld_rndn/float128/float128_rndn:
+
+#################################################
+
+ULP_INDEX                : The index of the mantissa's ULP (unit of least
+                           precision) for perl's NV type (long double or
+                           __float128). Value = REQUIRED_LDBL_MANT_DIG - 1,
+                           except for DoubleDouble when it is set to 52 (ie
+                           DBL_MANT_DIG - 1).
+
+LOW_SUBNORMAL_EXP        : Lowest subnormal exponent value for perl's NV type.
+                           If the exponent is less than this value, then it
+                           will be 0 when converted to an NV.
+
+HIGH_SUBNORMAL_EXP       : Highest subnormal exponent value for perl's NV type.
+                           If the exponent is higher than this value, then it
+                           will convert to a normal NV.
+
+#################################################
+
+
+
 *************************************************/
 
 
@@ -54,6 +76,20 @@ typedef __float128 float128;
 #define REQUIRED_LDBL_MANT_DIG 2098
 #else
 #define REQUIRED_LDBL_MANT_DIG LDBL_MANT_DIG
+#endif
+
+#if defined(NV_IS_DOUBLE) || (defined(NV_IS_LONG_DOUBLE) && (REQUIRED_LDBL_MANT_DIG == 2098 || REQUIRED_LDBL_MANT_DIG == 53))
+#define ULP_INDEX			52
+#define LOW_SUBNORMAL_EXP		-1074
+#define HIGH_SUBNORMAL_EXP		-1021
+#elif REQUIRED_LDBL_MANT_DIG == 64
+#define ULP_INDEX			63
+#define LOW_SUBNORMAL_EXP		-16445
+#define HIGH_SUBNORMAL_EXP		-16381
+#else
+#define ULP_INDEX			112
+#define LOW_SUBNORMAL_EXP		-16494
+#define HIGH_SUBNORMAL_EXP		-16381
 #endif
 
 #ifdef _MSC_VER
