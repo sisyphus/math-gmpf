@@ -1,4 +1,6 @@
 0.44
+ - Prototype subroutines listed in 'use subs()'.
+ - Move POD out of GMPf.pm and into (newly created) GMPf.pod.
 
 0.43
  - Fix test script bugs (t/NOK_and_POK.t).
