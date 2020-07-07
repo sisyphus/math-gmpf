@@ -82,7 +82,7 @@ Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
     our $VERSION = '0.44';
     #$VERSION = eval $VERSION;
 
-    DynaLoader::bootstrap Math::GMPf $VERSION;
+    Math::GMPf->DynaLoader::bootstrap($VERSION);
 
     %Math::GMPf::EXPORT_TAGS =(mpf => [qw(
 Rmpf_abs Rmpf_add Rmpf_add_ui Rmpf_ceil Rmpf_clear Rmpf_clear_mpf Rmpf_clear_ptr
