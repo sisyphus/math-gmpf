@@ -15,7 +15,7 @@
    Basically this module simply wraps all of the 'mpf'
    floating point functions provided by that library.
    The documentation below extensively plagiarises the
-   GMP documentation at http://gmplib.org .
+   GMP documentation at https://gmplib.org .
    See the Math::GMPf test suite for some examples
    of usage.
 
