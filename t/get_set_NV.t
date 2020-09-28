@@ -2,22 +2,19 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 use Config;
-use POSIX;
 
 print "1..12\n";
 
 my ($prec, $nv_max);
 
-if($Config{nvtype} eq 'double') {
-  $nv_max = POSIX::DBL_MAX;
-  $nv_max = 1.7976931348623157e308 unless $nv_max;
+if($Config{nvsize} == 8) {
+  $nv_max = 1.7976931348623157e308;
 }
 else {
-  $nv_max = POSIX::LDBL_MAX;
-  unless($nv_max) {
-    if($Config{nvsize} == 8) {$nv_max = 1.7976931348623157e308}
-    else {$nv_max = 1.18973149535723176508575932662800702e4932}
-  }
+  $nv_max = 1.18973149535723176508575932662800702e4932;
+  #Adjust if $nv_max is Inf
+  $nv_max = 1.18973149535723176502e4932
+    if $nv_max == 99 ** (99 ** 99);
 }
 
 $prec = 128; # Cover precisions of all NV's
