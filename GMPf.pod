@@ -643,9 +643,14 @@
      abs (Return value has default precision)
      int (on perl 5.8 only, NA on perl 5.6.
           Return value has default precision.)
+     ""
      = (The copy that gets modified will have default precision.
        The other copy retains the precision of the original)
-     ""
+
+    NOTE: Making use of the '=' overloading is not recommended unless
+          you understand its caveats. See 'perldoc overload' and
+          read it thoroughly, including the documentation regarding
+          'copy constructors'.
 
     Atempting to use the overloaded operators with objects that
     have been blessed into some package other than 'Math::GMPf'
