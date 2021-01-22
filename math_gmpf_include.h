@@ -63,13 +63,7 @@ HIGH_SUBNORMAL_EXP       : Highest subnormal exponent value for perl's NV type.
 
 #if defined(NV_IS_FLOAT128)
 #include <quadmath.h>
-#if defined(__MINGW32__) && !defined(__MINGW64__)
-typedef __float128 float128 __attribute__ ((aligned(32)));
-#elif defined(__MINGW64__) || (defined(DEBUGGING) && defined(NV_IS_DOUBLE))
-typedef __float128 float128 __attribute__ ((aligned(8)));
-#else
 typedef __float128 float128;
-#endif
 #endif
 
 #if LDBL_MANT_DIG == 106
@@ -82,7 +76,7 @@ typedef __float128 float128;
 #define ULP_INDEX			52
 #define LOW_SUBNORMAL_EXP		-1074
 #define HIGH_SUBNORMAL_EXP		-1021
-#elif REQUIRED_LDBL_MANT_DIG == 64
+#elif defined(NV_IS_LONG_DOUBLE) && REQUIRED_LDBL_MANT_DIG == 64
 #define ULP_INDEX			63
 #define LOW_SUBNORMAL_EXP		-16445
 #define HIGH_SUBNORMAL_EXP		-16381
