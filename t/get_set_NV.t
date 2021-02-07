@@ -2,19 +2,36 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 use Config;
+use POSIX;
 
 print "1..12\n";
 
 my ($prec, $nv_max);
 
 if($Config{nvsize} == 8) {
-  $nv_max = 1.7976931348623157e308;
+  # Don't assume that POSIX::DBL_MAX is available
+  eval{ $nv_max = POSIX::DBL_MAX };
+
+  # On older perl versions on x64 windows, the following
+  # would assign 'Inf' to $nv_max if POSIX_DBL_MAX were
+  # unavailable.
+  # Luckily, in those cases POSIX::DBL_MAX has already
+  # assigned the correct value.
+  $nv_max = 1.7976931348623157e308
+     unless $nv_max;
 }
 else {
-  $nv_max = 1.18973149535723176508575932662800702e4932;
-  #Adjust if $nv_max is Inf
-  $nv_max = 1.18973149535723176502e4932
-    if $nv_max == 99 ** (99 ** 99);
+  # Don't assume that POSIX::LDBL_MAX is available
+  eval{ $nv_max = POSIX::LDBL_MAX }
+    if($Config{nvtype} eq 'long double');
+
+  unless($nv_max) {
+    # Initially assume __float128 or IEEE-754 128-bit long double.
+    $nv_max = 1.18973149535723176508575932662800702e4932;
+    #Adjust to 80-bit extended precision LDBL_MAX if $nv_max is Inf
+    $nv_max = 1.18973149535723176502e4932
+      if $nv_max == 99 ** (99 ** 99);
+  }
 }
 
 $prec = 128; # Cover precisions of all NV's
