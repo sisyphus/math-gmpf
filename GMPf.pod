@@ -218,6 +218,7 @@
    Rmpf_set_z($rop, $z); # $z is a Math::GMPz object.
    Rmpf_set_q($rop, $q); # $q is a Math::GMPq object.
     Set the value of $rop from the 2nd arg.
+    With Rmpfr_set_NV, YMMV if nvtype is IBM DoubleDouble
 
    Rmpf_set_str($rop, $str, $base);
     Set the value of $rop from the string in $str. The string is of
@@ -298,6 +299,7 @@
     Convert $op to an NV. Rmpf_get_NV will truncate if necessary
     (i.e. round towards zero). Rmpf_get_NV_rndn will round to
     nearest, ties to even.
+    YMMV if nvtype is the IBM DoubleDouble.
 
    $si = Rmpf_get_si($op);
    $ui = Rmpf_get_ui($op);
