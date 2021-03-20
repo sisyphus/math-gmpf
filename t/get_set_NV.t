@@ -12,11 +12,12 @@ if($Config{nvsize} == 8) {
   # Don't assume that POSIX::DBL_MAX is available
   eval{ $nv_max = POSIX::DBL_MAX };
 
-  # On older perl versions on x64 windows, the following
-  # would assign 'Inf' to $nv_max if POSIX_DBL_MAX were
-  # unavailable.
-  # Luckily, in those cases POSIX::DBL_MAX has already
-  # assigned the correct value.
+  # On older perl versions on x64 windows, assigning
+  # 1.7976931348623157e308 to $nv_max would
+  # result in $nv_max being set to 'Inf'.
+  # Luckily, on those perls, POSIX::DBL_MAX is available
+  # and has already assigned the correct value.
+
   $nv_max = 1.7976931348623157e308
      unless $nv_max;
 }
