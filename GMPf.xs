@@ -3219,8 +3219,10 @@ SV * wrap_gmp_snprintf(pTHX_ SV * s, SV * bytes, SV * a, SV * b, int buflen) {
 }
 
 int _itsa(pTHX_ SV * a) {
-     if(SvUOK(a)) return 1;
-     if(SvIOK(a)) return 2;
+     if(SvIOK(a)) {
+       if(SvUOK(a)) return 1;
+       return 2;
+     }
      if(SvPOK(a)) return 4;
      if(SvNOK(a)) return 3;
      if(sv_isobject(a)) {
