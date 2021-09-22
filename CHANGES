@@ -1,4 +1,7 @@
 0.45
+ - Simplify Makefile.PL.
+ - Replace XS defines NV_IS_FLOAT128 and NV_IS_LONG_DOUBLE with
+   USE_QUADMATH and USE_LONG_DOUBLE (which are already defined by perl headers).
 
 0.44
  - Prototype subroutines listed in 'use subs()'.
