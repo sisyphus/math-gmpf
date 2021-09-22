@@ -259,7 +259,7 @@ void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
 
      mpf_clear(t);
 
-#elif defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
+#elif defined(USE_LONG_DOUBLE) || defined(USE_QUADMATH)
      char * buffer;
      int exp, exp2 = 0;
      long double fr, buffer_size;
@@ -298,7 +298,7 @@ void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
 
 void _Rmpf_set_float128(pTHX_ mpf_t *q, SV * p) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
      char * buffer;
      int exp, exp2 = 0, returned;
@@ -354,11 +354,11 @@ void Rmpf_set_d(mpf_t * p, double d) {
 
 void Rmpf_set_NV(pTHX_ mpf_t *q, SV * p) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
      _Rmpf_set_float128(aTHX_ q, p);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
      _Rmpf_set_ld(aTHX_ q, p);
 
@@ -751,7 +751,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 
 /* we replicate rounding towards zero because this is what mpf_get_d does */
 
-#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
+#if defined(USE_LONG_DOUBLE) || defined(USE_QUADMATH)
 #if REQUIRED_LDBL_MANT_DIG == 2098
 
      double msd, lsd;
@@ -879,7 +879,7 @@ SV * _Rmpf_get_ld(pTHX_ mpf_t * x) {
 
 SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_LONG_DOUBLE)
+#if defined(USE_LONG_DOUBLE)
 #if REQUIRED_LDBL_MANT_DIG == 2098
 
      double msd, lsd;
@@ -1038,7 +1038,7 @@ SV * _Rmpf_get_ld_rndn(pTHX_ mpf_t * x) {
 
 SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
      mpf_t t;
      long i, exp, retract = 0, bits = 113;
      char *out;
@@ -1081,12 +1081,12 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
      mpf_get_str(out, &exp, 2, mpf_get_prec(t), t);
 
+     mpf_clear(t);
+
      if(exp < -16493) {
        Safefree(out);
        return newSVnv(0.0Q);
      }
-
-     mpf_clear(t);
 
      if(out[0] == '-') {
        sign = -1.0Q;
@@ -1132,7 +1132,7 @@ SV * _Rmpf_get_float128(pTHX_ mpf_t * x) {
 
 SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
      mpf_t t, f128_min;
      size_t n_digits;
@@ -1257,11 +1257,11 @@ SV * _Rmpf_get_float128_rndn(pTHX_ mpf_t * x) {
 
 SV * Rmpf_get_NV(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
      return _Rmpf_get_float128(aTHX_ x);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
      return _Rmpf_get_ld(aTHX_ x);
 
@@ -1275,11 +1275,11 @@ SV * Rmpf_get_NV(pTHX_ mpf_t * x) {
 
 SV * Rmpf_get_NV_rndn(pTHX_ mpf_t * x) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
      return _Rmpf_get_float128_rndn(aTHX_ x);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
      return _Rmpf_get_ld_rndn(aTHX_ x);
 
@@ -1503,9 +1503,9 @@ SV * overload_mul(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SV_IS_NOK(b)) {
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
        _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1602,9 +1602,9 @@ SV * overload_add(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SV_IS_NOK(b)) {
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
        _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1706,9 +1706,9 @@ SV * overload_sub(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SV_IS_NOK(b)) {
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
        _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1813,9 +1813,9 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
      }
 
      if(SV_IS_NOK(b)) {
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
        _Rmpf_set_float128(aTHX_ mpf_t_obj, b);
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        _Rmpf_set_ld(aTHX_ mpf_t_obj, b);
 #else
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
@@ -1955,12 +1955,12 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(0);
        }
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
@@ -2046,12 +2046,12 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(0);
        }
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
@@ -2137,12 +2137,12 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(0);
        }
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2226,12 +2226,12 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(0);
        }
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2319,12 +2319,12 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(ret);
        }
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
 
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
@@ -2402,12 +2402,12 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 
        if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(0);
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2482,12 +2482,12 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 
        if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(1);
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2697,12 +2697,12 @@ SV * overload_mul_eq(pTHX_ SV * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2772,12 +2772,12 @@ SV * overload_add_eq(pTHX_ SV * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2847,12 +2847,12 @@ SV * overload_sub_eq(pTHX_ SV * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -2924,12 +2924,12 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
 
        mpf_init2(t, 113);
        _Rmpf_set_float128(aTHX_ &t, b);
 
-#elif defined(NV_IS_LONG_DOUBLE)
+#elif defined(USE_LONG_DOUBLE)
        mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
        _Rmpf_set_ld(aTHX_ &t, b);
 #else
@@ -3249,7 +3249,7 @@ int _has_longlong(void) {
 }
 
 int _has_longdouble(void) {
-#if defined(NV_IS_LONG_DOUBLE) || defined(NV_IS_FLOAT128)
+#if defined(USE_LONG_DOUBLE) || defined(USE_QUADMATH)
     return 1;
 #else
     return 0;
@@ -3344,7 +3344,7 @@ SV * _GMP_NAIL_BITS(pTHX) {
 }
 
 int _nv_is_float128(void) {
-#if defined(NV_IS_FLOAT128)
+#if defined(USE_QUADMATH)
     return 1;
 #else
     return 0;
