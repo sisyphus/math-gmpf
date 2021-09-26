@@ -15,7 +15,7 @@ print "\nThis module requires gmp-4.2.0 (or later)\n\n";
 
 my $use_64_bit_int  = 0; # Let perl decide whether to include 64-bit 'long long' support
 my $use_long_double = 0;# Let perl decide whether to include 'long double' support
-my $use_quadmath    = 0;# Let perl decide whether to include 'long double' support
+my $use_quadmath    = 0;# Let perl decide whether to include 'quadmath' support
 
 my $defines = $] < 5.008 ? "-DOLDPERL" : "-DNEWPERL";
 
@@ -25,18 +25,18 @@ unless($Config{ivsize} < 8 || $Config{ivtype} eq 'long') {
 
 if($Config::Config{nvsize} > 8 ) {
     if($Config{nvtype} eq '__float128') {$use_quadmath = 1}
-    else {$use_long_double = 1}
+    else                                {$use_long_double = 1}
 }
 
 
-$defines =~ /-DMATH_GMPF_NEED_LONG_LONG_INT/ ? print "Building with 64-bit'long long' support\n" :
-                                 print "Building without 64-bit 'long long' support\n";
+$defines =~ /-DMATH_GMPF_NEED_LONG_LONG_INT/ ? print "Building with 64-bit'long long' support\n"
+                                             : print "Building without 64-bit 'long long' support\n";
 
-$use_long_double == 1 ? print "Building with 'long double' support\n" :
-                               print "Building without 'long double' support\n";
+$use_long_double == 1 ? print "Building with 'long double' support\n"
+                      : print "Building without 'long double' support\n";
 
-$use_quadmath == 1    ? print "Building with '__float128' support\n" :
-                                 print "Building without '__float128' support\n";
+$use_quadmath == 1    ? print "Building with '__float128' support\n"
+                      : print "Building without '__float128' support\n";
 
 
 if($^O =~ /MSWin32/i && $] < 5.022) {$defines .= " -D_WIN32_BIZARRE_INFNAN"}
