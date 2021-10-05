@@ -239,13 +239,13 @@ void _Rmpf_set_ld(pTHX_ mpf_t * q, SV * p) {
      mpf_t t, d;
      long double lsd;                /* Will be assigned the Least Siginficant Double */
 
-     msd = (double)SvNVX(p);
+     msd = (double)SvNV(p);
      if(msd != 0.0) {
        if(msd != msd) croak("In _Rmpf_set_ld, cannot coerce a NaN to a Math::GMPf object");
        if(msd / msd != 1.0) croak("In _Rmpf_set_ld, cannot coerce an Inf to a Math::GMPf object");
      }
 
-     lsd = SvNVX(p) - (long double)msd;
+     lsd = SvNV(p) - (long double)msd;
 
      mpf_init2(t, 2098);
      mpf_init2(d, 53);
@@ -352,7 +352,7 @@ void Rmpf_set_d(mpf_t * p, double d) {
      mpf_set_d(*p, d);
 }
 
-void Rmpf_set_NV(pTHX_ mpf_t *q, SV * p) {
+void Rmpf_set_NV(pTHX_ mpf_t * q, SV * p) {
 
 #if defined(USE_QUADMATH)
 
@@ -368,6 +368,52 @@ void Rmpf_set_NV(pTHX_ mpf_t *q, SV * p) {
 
 #endif
 
+}
+
+/* Also handles UV values */
+void Rmpf_set_IV(pTHX_ mpf_t * a, SV * my_iv) {
+
+#ifdef MATH_GMPF_NEED_LONG_LONG_INT
+
+     if(SvUOK(my_iv) || SV_IS_IOK(my_iv)) mpf_set_str(*a, SvPV_nolen(my_iv), 10);
+     else croak("Arg provided to Rmpf_set_IV is not an IV");
+
+#else
+
+     if(SV_IS_IOK(my_iv)) {
+       if(SvUOK(my_iv)) mpf_set_ui(*a, SvUVX(my_iv));
+       else mpf_set_si(*a, SvIVX(my_iv));
+     }
+     else croak("Arg provided to Rmpf_set_IV is not an IV");
+
+#endif
+
+}
+
+int Rmpf_cmp_IV(pTHX_ mpf_t * f, SV * iv) {
+    mpf_t temp;
+    int ret;
+
+    mpf_init2(temp, 64);
+
+    Rmpf_set_IV(aTHX_ &temp, iv);
+    ret = mpf_cmp(*f, temp);
+
+    mpf_clear(temp);
+    return ret;
+}
+
+int Rmpf_cmp_NV(pTHX_ mpf_t * f, SV * nv) {
+    mpf_t temp;
+    int ret;
+
+    mpf_init2(temp, 128);
+
+    Rmpf_set_NV(aTHX_ &temp, nv);
+    ret = mpf_cmp(*f, temp);
+
+    mpf_clear(temp);
+    return ret;
 }
 
 SV * Rmpf_init_set_nobless(pTHX_ mpf_t * a) {
@@ -1899,32 +1945,12 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_gt", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret > 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret > 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -1955,21 +1981,7 @@ SV * overload_gt(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(0);
        }
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       mpf_set_d(t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret > 0) return newSViv(1);
        return newSViv(0);
@@ -1991,31 +2003,12 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_gte", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret >= 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret >= 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2042,25 +2035,11 @@ SV * overload_gte(pTHX_ mpf_t * a, SV * b, SV * third) {
          if(SvNVX(b) > 0) ret = -1;
          else ret = 1;
          if(third == &PL_sv_yes) ret *= -1;
-         if(ret > 0) return newSViv(1);
+         if(ret >= 0) return newSViv(1);
          return newSViv(0);
        }
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       mpf_set_d(t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret >= 0) return newSViv(1);
        return newSViv(0);
@@ -2082,31 +2061,12 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_lt", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret < 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret < 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2130,27 +2090,14 @@ SV * overload_lt(pTHX_ mpf_t * a, SV * b, SV * third) {
 
        if(SvNVX(b) != SvNVX(b)) return newSVnv(0);
        if(SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1)) {
-         if(SvNVX(b) > 0) ret = 1;
-         else ret = -1;
+         if(SvNVX(b) > 0) ret = -1;
+         else ret = 1;
          if(third == &PL_sv_yes) ret *= -1;
-         if(ret > 0) return newSViv(1);
+         if(ret < 0) return newSViv(1);
          return newSViv(0);
        }
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       mpf_set_d(t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(1);
        return newSViv(0);
@@ -2172,31 +2119,12 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_lte", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret <= 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret <= 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2217,29 +2145,17 @@ SV * overload_lte(pTHX_ mpf_t * a, SV * b, SV * third) {
      }
 
      if(SV_IS_NOK(b)) {
+
        if(SvNVX(b) != SvNVX(b)) return newSVnv(0);
        if(SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1)) {
-         if(SvNVX(b) > 0) ret = 1;
-         else ret = -1;
+         if(SvNVX(b) > 0) ret = -1;
+         else ret = 1;
          if(third == &PL_sv_yes) ret *= -1;
-         if(ret > 0) return newSViv(1);
+         if(ret <= 0) return newSViv(1);
          return newSViv(0);
        }
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       mpf_set_d(t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret <= 0) return newSViv(1);
        return newSViv(0);
@@ -2261,34 +2177,13 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_spaceship", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret < 0) return newSViv(-1);
-         if(ret > 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret < 0) return newSViv(-1);
-       if(ret > 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2319,24 +2214,7 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(ret);
        }
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-
-#else
-
-       mpf_init2(t, 53);
-       mpf_set_d(t, SvNVX(b));
-
-#endif
        ret = mpf_cmp(*a, t);
-       mpf_clear(t);
        if(third == &PL_sv_yes) ret *= -1;
        if(ret < 0) return newSViv(-1);
        if(ret > 0) return newSViv(1);
@@ -2357,31 +2235,14 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
 }
 
 SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
-     mpf_t t;
+     mpf_t t; /* Needed if b is SvPOK */
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_equiv", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(ret == 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(ret == 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(ret == 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2402,20 +2263,7 @@ SV * overload_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 
        if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(0);
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       Rmpf_set_d(&t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(ret == 0) return newSViv(1);
        return newSViv(0);
      }
@@ -2436,31 +2284,11 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
      mpf_t t;
      int ret;
 
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
      if(SV_IS_IOK(b)) {
-       if(mpf_init_set_str(t, SvPV_nolen(b), 10))
-         croak("Invalid string (%s) supplied to Math::GMPf::overload_not_equiv", SvPV_nolen(b));
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
+       ret = Rmpf_cmp_IV(aTHX_ a, b);
        if(ret != 0) return newSViv(1);
        return newSViv(0);
      }
-#else
-     if(SV_IS_IOK(b)) {
-       if(SvUOK(b)) {
-         ret = mpf_cmp_ui(*a, SvUVX(b));
-         if(third == &PL_sv_yes) ret *= -1;
-         if(ret != 0) return newSViv(1);
-         return newSViv(0);
-       }
-
-       ret = mpf_cmp_si(*a, SvIVX(b));
-       if(third == &PL_sv_yes) ret *= -1;
-       if(ret != 0) return newSViv(1);
-       return newSViv(0);
-     }
-#endif
 
      if(SV_IS_POK(b)) {
 
@@ -2480,23 +2308,9 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-       if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(1);
+       if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(0);
 
-#if defined(USE_QUADMATH)
-
-       mpf_init2(t, 113);
-       _Rmpf_set_float128(aTHX_ &t, b);
-
-#elif defined(USE_LONG_DOUBLE)
-       mpf_init2(t, REQUIRED_LDBL_MANT_DIG);
-       _Rmpf_set_ld(aTHX_ &t, b);
-#else
-       mpf_init2(t, 53);
-       Rmpf_set_d(&t, SvNVX(b));
-#endif
-       ret = mpf_cmp(*a, t);
-       mpf_clear(t);
-       if(third == &PL_sv_yes) ret *= -1;
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(ret != 0) return newSViv(1);
        return newSViv(0);
      }
@@ -3382,26 +3196,6 @@ int _required_ldbl_mant_dig(void) {
      return REQUIRED_LDBL_MANT_DIG;
 }
 
-/* Also handles UV values */
-void Rmpf_set_IV(pTHX_ mpf_t * a, SV * my_iv) {
-
-#ifdef MATH_GMPF_NEED_LONG_LONG_INT
-
-     if(SvUOK(my_iv) || SV_IS_IOK(my_iv)) mpf_set_str(*a, SvPV_nolen(my_iv), 10);
-     else croak("Arg provided to Rmpf_set_IV is not an IV");
-
-#else
-
-     if(SV_IS_IOK(my_iv)) {
-       if(SvUOK(my_iv)) mpf_set_ui(*a, SvUVX(my_iv));
-       else mpf_set_si(*a, SvIVX(my_iv));
-     }
-     else croak("Arg provided to Rmpf_set_IV is not an IV");
-
-#endif
-
-}
-
 SV * MATH_GMPf_IV_MAX(pTHX) {
      return newSViv((IV)IV_MAX);
 }
@@ -3706,6 +3500,39 @@ Rmpf_set_NV (q, p)
         }
         /* must have used dXSARGS; list context implied */
         return; /* assume stack size is correct */
+
+void
+Rmpf_set_IV (a, my_iv)
+	mpf_t *	a
+	SV *	my_iv
+        PREINIT:
+        I32* temp;
+        PPCODE:
+        temp = PL_markstack_ptr++;
+        Rmpf_set_IV(aTHX_ a, my_iv);
+        if (PL_markstack_ptr != temp) {
+          /* truly void, because dXSARGS not invoked */
+          PL_markstack_ptr = temp;
+          XSRETURN_EMPTY; /* return empty stack */
+        }
+        /* must have used dXSARGS; list context implied */
+        return; /* assume stack size is correct */
+
+int
+Rmpf_cmp_IV (f, iv)
+	mpf_t *	f
+	SV *	iv
+CODE:
+  RETVAL = Rmpf_cmp_IV (aTHX_ f, iv);
+OUTPUT:  RETVAL
+
+int
+Rmpf_cmp_NV (f, nv)
+	mpf_t *	f
+	SV *	nv
+CODE:
+  RETVAL = Rmpf_cmp_NV (aTHX_ f, nv);
+OUTPUT:  RETVAL
 
 SV *
 Rmpf_init_set_nobless (a)
@@ -5042,23 +4869,6 @@ set_nok_pok (x)
 int
 _required_ldbl_mant_dig ()
 
-
-void
-Rmpf_set_IV (a, my_iv)
-	mpf_t *	a
-	SV *	my_iv
-        PREINIT:
-        I32* temp;
-        PPCODE:
-        temp = PL_markstack_ptr++;
-        Rmpf_set_IV(aTHX_ a, my_iv);
-        if (PL_markstack_ptr != temp) {
-          /* truly void, because dXSARGS not invoked */
-          PL_markstack_ptr = temp;
-          XSRETURN_EMPTY; /* return empty stack */
-        }
-        /* must have used dXSARGS; list context implied */
-        return; /* assume stack size is correct */
 
 SV *
 MATH_GMPf_IV_MAX ()
