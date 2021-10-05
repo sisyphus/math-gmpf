@@ -51,7 +51,7 @@ use overload
 __GNU_MP_VERSION __GNU_MP_VERSION_MINOR __GNU_MP_VERSION_PATCHLEVEL
 __GNU_MP_RELEASE __GMP_CC __GMP_CFLAGS
 Rmpf_abs Rmpf_add Rmpf_add_ui Rmpf_ceil Rmpf_clear Rmpf_clear_mpf Rmpf_clear_ptr
-Rmpf_cmp Rmpf_cmp_d Rmpf_cmp_si Rmpf_cmp_ui
+Rmpf_cmp Rmpf_cmp_d Rmpf_cmp_si Rmpf_cmp_ui Rmpf_cmp_NV Rmpf_cmp_IV
 Rmpf_deref2 Rmpf_div Rmpf_div_2exp Rmpf_div_ui
 Rmpf_eq Rmpf_fits_sint_p Rmpf_fits_slong_p Rmpf_fits_sshort_p Rmpf_fits_uint_p
 Rmpf_fits_ulong_p Rmpf_fits_ushort_p Rmpf_floor Rmpf_fprintf
@@ -86,7 +86,7 @@ Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
 
     %Math::GMPf::EXPORT_TAGS =(mpf => [qw(
 Rmpf_abs Rmpf_add Rmpf_add_ui Rmpf_ceil Rmpf_clear Rmpf_clear_mpf Rmpf_clear_ptr
-Rmpf_cmp Rmpf_cmp_d Rmpf_cmp_si Rmpf_cmp_ui
+Rmpf_cmp Rmpf_cmp_d Rmpf_cmp_si Rmpf_cmp_ui Rmpf_cmp_NV Rmpf_cmp_IV
 Rmpf_deref2 Rmpf_div Rmpf_div_2exp Rmpf_div_ui
 Rmpf_eq Rmpf_fits_sint_p Rmpf_fits_slong_p Rmpf_fits_sshort_p Rmpf_fits_uint_p
 Rmpf_fits_ulong_p Rmpf_fits_ushort_p Rmpf_floor Rmpf_fprintf
