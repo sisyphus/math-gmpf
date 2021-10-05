@@ -380,10 +380,12 @@
 
    COMPARISON FUNCTIONS
 
-   $si = Rmpf_cmp($op1, $op2);
-   $si = Rmpf_cmp_ui($op, $ui);
-   $si = Rmpf_cmp_si($op, $si);
-   $si = Rmpf_cmp_d($op, $double);
+   $si = Rmpf_cmp   ($op1, $op2);
+   $si = Rmpf_cmp_ui($op,  $ui);
+   $si = Rmpf_cmp_si($op,  $si);
+   $si = Rmpf_cmp_d ($op,  $double);
+   $si = Rmpf_cmp_NV($op,  $NV);    # $NV is $Config{nvtype}
+   $si = Rmpf_cmp_IV($op,  $IV);    # $IV is $Config{ivtype}
     Compare 1st arg and 2nd arg.  Return a positive value if
     1st arg >  2nd arg, zero if 1st arg = 2nd arg, and a
     negative value if 1st arg < 2nd arg.
