@@ -274,6 +274,10 @@
    $rop = Rmpf_init_set_si_nobless($si);
    $rop = Rmpf_init_set_d($double);
    $rop = Rmpf_init_set_d_nobless($double);
+   $rop = Rmpf_init_set_IV($IV);           # $IV is perl IV
+   $rop = Rmpf_init_set_IV_nobless($IV);
+   $rop = Rmpf_init_set_NV($NV);           # $NV is perl NV
+   $rop = Rmpf_init_set_NV_nobless($NV);
     Initialise $rop and assign to it the value held by
     the functions argument. See the 'Rmpf_set*'
     functions above.
