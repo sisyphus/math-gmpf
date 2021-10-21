@@ -364,10 +364,44 @@ void Rmpf_set_NV(pTHX_ mpf_t * q, SV * p) {
 
 #else
 
-     Rmpf_set_d(q, SvNV(p));
+     Rmpf_set_d(q, SvNV(p)); /* Rmpf_set_d checks that p is not infnan */
 
 #endif
 
+}
+
+SV * Rmpf_init_set_NV(pTHX_ SV * p) {
+     mpf_t * mpf_t_obj;
+     SV * obj_ref, * obj;
+
+     Newx(mpf_t_obj, 1, mpf_t);
+     if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_NV function");
+     obj_ref = newSV(0);
+     obj = newSVrv(obj_ref, "Math::GMPf");
+
+     mpf_init(*mpf_t_obj);
+
+     sv_setiv(obj, INT2PTR(IV, mpf_t_obj));
+     Rmpf_set_NV(aTHX_ mpf_t_obj, p);
+     SvREADONLY_on(obj);
+     return obj_ref;
+}
+
+SV * Rmpf_init_set_NV_nobless(pTHX_ SV * p) {
+     mpf_t * mpf_t_obj;
+     SV * obj_ref, * obj;
+
+     Newx(mpf_t_obj, 1, mpf_t);
+     if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_NV_nobless function");
+     obj_ref = newSV(0);
+     obj = newSVrv(obj_ref, NULL);
+
+     mpf_init(*mpf_t_obj);
+
+     sv_setiv(obj, INT2PTR(IV, mpf_t_obj));
+     Rmpf_set_NV(aTHX_ mpf_t_obj, p);
+     SvREADONLY_on(obj);
+     return obj_ref;
 }
 
 /* Also handles UV values */
@@ -388,6 +422,40 @@ void Rmpf_set_IV(pTHX_ mpf_t * a, SV * my_iv) {
 
 #endif
 
+}
+
+SV * Rmpf_init_set_IV(pTHX_ SV * p) {
+     mpf_t * mpf_t_obj;
+     SV * obj_ref, * obj;
+
+     Newx(mpf_t_obj, 1, mpf_t);
+     if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_IV function");
+     obj_ref = newSV(0);
+     obj = newSVrv(obj_ref, "Math::GMPf");
+
+     mpf_init(*mpf_t_obj);
+
+     sv_setiv(obj, INT2PTR(IV, mpf_t_obj));
+     Rmpf_set_IV(aTHX_ mpf_t_obj, p);
+     SvREADONLY_on(obj);
+     return obj_ref;
+}
+
+SV * Rmpf_init_set_IV_nobless(pTHX_ SV * p) {
+     mpf_t * mpf_t_obj;
+     SV * obj_ref, * obj;
+
+     Newx(mpf_t_obj, 1, mpf_t);
+     if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_IV_nobless function");
+     obj_ref = newSV(0);
+     obj = newSVrv(obj_ref, NULL);
+
+     mpf_init(*mpf_t_obj);
+
+     sv_setiv(obj, INT2PTR(IV, mpf_t_obj));
+     Rmpf_set_IV(aTHX_ mpf_t_obj, p);
+     SvREADONLY_on(obj);
+     return obj_ref;
 }
 
 int Rmpf_cmp_IV(pTHX_ mpf_t * f, SV * iv) {
@@ -3501,6 +3569,20 @@ Rmpf_set_NV (q, p)
         /* must have used dXSARGS; list context implied */
         return; /* assume stack size is correct */
 
+SV *
+Rmpf_init_set_NV (p)
+	SV *	p
+CODE:
+  RETVAL = Rmpf_init_set_NV (aTHX_ p);
+OUTPUT:  RETVAL
+
+SV *
+Rmpf_init_set_NV_nobless (p)
+	SV *	p
+CODE:
+  RETVAL = Rmpf_init_set_NV_nobless (aTHX_ p);
+OUTPUT:  RETVAL
+
 void
 Rmpf_set_IV (a, my_iv)
 	mpf_t *	a
@@ -3517,6 +3599,20 @@ Rmpf_set_IV (a, my_iv)
         }
         /* must have used dXSARGS; list context implied */
         return; /* assume stack size is correct */
+
+SV *
+Rmpf_init_set_IV (p)
+	SV *	p
+CODE:
+  RETVAL = Rmpf_init_set_IV (aTHX_ p);
+OUTPUT:  RETVAL
+
+SV *
+Rmpf_init_set_IV_nobless (p)
+	SV *	p
+CODE:
+  RETVAL = Rmpf_init_set_IV_nobless (aTHX_ p);
+OUTPUT:  RETVAL
 
 int
 Rmpf_cmp_IV (f, iv)
