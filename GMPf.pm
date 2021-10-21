@@ -61,6 +61,7 @@ Rmpf_init Rmpf_init2 Rmpf_init2_nobless Rmpf_init_nobless Rmpf_init_set
 Rmpf_init_set_d Rmpf_init_set_d_nobless Rmpf_init_set_nobless Rmpf_init_set_si
 Rmpf_init_set_si_nobless Rmpf_init_set_str Rmpf_init_set_str_nobless
 Rmpf_init_set_ui Rmpf_init_set_ui_nobless Rmpf_inp_str
+Rmpf_init_set_NV Rmpf_init_set_IV Rmpf_init_set_NV_nobless Rmpf_init_set_IV_nobless
 TRmpf_inp_str
 Rmpf_integer_p Rmpf_mul
 Rmpf_mul_2exp Rmpf_mul_ui Rmpf_neg Rmpf_out_str
@@ -96,6 +97,7 @@ Rmpf_init Rmpf_init2 Rmpf_init2_nobless Rmpf_init_nobless Rmpf_init_set
 Rmpf_init_set_d Rmpf_init_set_d_nobless Rmpf_init_set_nobless Rmpf_init_set_si
 Rmpf_init_set_si_nobless Rmpf_init_set_str Rmpf_init_set_str_nobless
 Rmpf_init_set_ui Rmpf_init_set_ui_nobless Rmpf_inp_str
+Rmpf_init_set_NV Rmpf_init_set_IV Rmpf_init_set_NV_nobless Rmpf_init_set_IV_nobless
 TRmpf_inp_str
 Rmpf_integer_p Rmpf_mul
 Rmpf_mul_2exp Rmpf_mul_ui Rmpf_neg Rmpf_out_str
@@ -162,7 +164,7 @@ sub new {
     # Die if there are any additional args (unless $type == 4)
     if($type == _UOK_T || $type == _IOK_T) {
       if(@_ ) {die "Too many arguments supplied to new() - expected only one"}
-      return Rmpf_init_set_str($arg1, 10);
+      return Rmpf_init_set_IV($arg1);
     }
 
     if($type == _POK_T) {
@@ -180,12 +182,7 @@ sub new {
 
     if($type == _NOK_T) {
       if(@_ ) {die "Too many arguments supplied to new() - expected only one"}
-      if(Math::GMPf::_has_longdouble()) {
-        my $ret = Rmpf_init();
-        _Rmpf_set_ld($ret, $arg1);
-        return $ret;
-      }
-      return Rmpf_init_set_d($arg1);
+      return Rmpf_init_set_NV($arg1);
     }
 
     if($type == _MATH_GMPf_T) {
