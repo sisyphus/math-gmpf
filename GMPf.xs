@@ -2282,11 +2282,9 @@ SV * overload_spaceship(pTHX_ mpf_t * a, SV * b, SV * third) {
          return newSViv(ret);
        }
 
-       ret = mpf_cmp(*a, t);
+       ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(third == &PL_sv_yes) ret *= -1;
-       if(ret < 0) return newSViv(-1);
-       if(ret > 0) return newSViv(1);
-       return newSViv(0);
+       return newSViv(ret);
      }
 
      if(sv_isobject(b)) {
