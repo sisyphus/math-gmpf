@@ -53,7 +53,6 @@ cmp_ok($nv, '==', Rmpf_get_NV_rndn($fi), "1: NV successfully retrieved from Math
 
 my $inf = 999**(999**999);
 my $nan = $inf / $inf;
-
 eval {Rmpf_set_NV($fi, $inf);};
 
 like($@, qr/cannot coerce an Inf to a Math::GMPf object/, "Cannot assign Inf to a Math::GMPf object");
@@ -304,6 +303,13 @@ else {
 
     my $mpfr = Math::MPFR::Rmpfr_init2(2098);
     my $mpf  =             Rmpf_init2 (2098);
+
+    # On Math-MPFR-4.17 and earlier,Rmpfr_set_NV will croak if
+    # $nv is detected as something other than an NV.
+    # We therefore skip further testing of this $nv if this
+    # condition is met:
+
+    next if ($Math::MPFR::VERSION < 4.18 && Math::MPFR::_itsa($nv) != 3);
 
     Math::MPFR::Rmpfr_set_NV($mpfr, $nv, 0);
                 Rmpf_set_NV ($mpf,  $nv);
