@@ -212,13 +212,19 @@
    Rmpf_set_ui($rop, $ui);
    Rmpf_set_si($rop, $si);
    Rmpf_set_d($rop, $double);
-   Rmpf_set_NV($rop, $NV); # $NV is $Config{nvtype}
-   Rmpf_set_IV($rop, $IV); # $IV is $Config{ivtype}
+   Rmpf_set_NV($rop, $nv); # $nv is $Config{nvtype}
+   Rmpf_set_IV($rop, $iv); # $iv is $Config{ivtype}
                            # (or $Config{uvtype}).
    Rmpf_set_z($rop, $z); # $z is a Math::GMPz object.
    Rmpf_set_q($rop, $q); # $q is a Math::GMPq object.
     Set the value of $rop from the 2nd arg.
-    With Rmpfr_set_NV, YMMV if nvtype is IBM DoubleDouble
+    With Rmpf_set_IV, $iv must have its IOK flag set, or the
+    function will croak. Best to first check IOK_flag($iv), which
+    will return a non-zero value if and only if the IOK flag is set.
+    With Rmpf_set_NV, $nv must have its NOK flag set, or the
+    function will croak. Best to first check NOK_flag($nv), which
+    will return a non-zero value if and only if the NOK flag is set.
+
 
    Rmpf_set_str($rop, $str, $base);
     Set the value of $rop from the string in $str. The string is of
@@ -316,7 +322,7 @@
     IV or a UV return that IV/UV value of (truncated) $op.
     Otherwise die with an appropriate error message. To find
     find out if the truncated value of $op will fit, use the
-    functions 'Rmpf_fits_IV_p' and 'Rmpf_fits_UV_p'.
+    'Rmpf_fits_IV_p' function.
 
    ($double, $exp) = Rmpf_get_d_2exp($op);
     Find $double and $exp such that $double * (2 ** $exp),
@@ -388,11 +394,20 @@
    $si = Rmpf_cmp_ui($op,  $ui);
    $si = Rmpf_cmp_si($op,  $si);
    $si = Rmpf_cmp_d ($op,  $double);
-   $si = Rmpf_cmp_NV($op,  $NV);    # $NV is $Config{nvtype}
-   $si = Rmpf_cmp_IV($op,  $IV);    # $IV is $Config{ivtype}
+   $si = Rmpf_cmp_NV($op,  $nv);    # $nv is $Config{nvtype}
+   $si = Rmpf_cmp_IV($op,  $iv);    # $nv is $Config{ivtype}
     Compare 1st arg and 2nd arg.  Return a positive value if
     1st arg >  2nd arg, zero if 1st arg = 2nd arg, and a
     negative value if 1st arg < 2nd arg.
+
+    NOTE:
+         Rmpf_cmp_IV() requires that the 2nd argument has its IOK
+         flag set, and Rmpf_cmp_NV() requires that the 2nd
+         argument has its NOK flag set.
+         Otherwise these functions croak.
+         Suggestion: first check the status of the flag using
+         IOK_flag($iv) or NOK_flag($nv),which return a non-zero
+         value if and only if the flag in question is set.
 
    Rmpf_eq($op1, $op2, $bits);
     Return non-zero if the first $bits bits of $op1 and $op2
@@ -487,10 +502,19 @@
    $bool = Rmpf_fits_sint_p($op);
    $bool = Rmpf_fits_ushort_p($op);
    $bool = Rmpf_fits_sshort_p($op);
-   $bool = Rmpf_fits_UV_p($op);    # fits into a perl UV
    $bool = Rmpf_fits_IV_p($op);    # fits into a perl IV
     Return non-zero if OP would fit in the respective type, when
     truncated to an integer.
+
+   $si = IOK_flag($sv); # $sv is a perl scalar variable.
+   $si = NOK_flag($sv);
+   $si = POK_flag($sv);
+
+   Return 0 if $sv's IOK/NOK/POK flag is unset.
+   Else return 1.
+   If the IsUV flag is set, then IOK_flag() returns 2, thereby indicating
+   that both the IOK and IsUV flags are set (and that the integer value
+   held by $sv should therefore be treated as unsigned).
 
    $iv = Math::GMPf::nok_pokflag(); # not exported
     Returns the value of the nok_pok flag. This flag is
