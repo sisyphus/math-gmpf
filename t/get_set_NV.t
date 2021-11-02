@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Math::GMPf qw(:mpf);
+use Math::GMPf qw(:mpf IOK_flag NOK_flag POK_flag);
 use Config;
 use POSIX;
 
@@ -309,7 +309,7 @@ else {
     # We therefore skip further testing of this $nv if this
     # condition is met:
 
-    next if ($Math::MPFR::VERSION < 4.18 && Math::MPFR::_itsa($nv) != 3);
+    next if !NOK_flag($nv);
 
     Math::MPFR::Rmpfr_set_NV($mpfr, $nv, 0);
                 Rmpf_set_NV ($mpf,  $nv);
