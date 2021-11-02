@@ -354,6 +354,9 @@ void Rmpf_set_d(mpf_t * p, double d) {
 
 void Rmpf_set_NV(pTHX_ mpf_t * q, SV * p) {
 
+     if(!SV_IS_NOK(p))
+       croak("In Rmpf_set_NV, 2nd argument is not an NV");
+
 #if defined(USE_QUADMATH)
 
      _Rmpf_set_float128(aTHX_ q, p);
@@ -462,6 +465,9 @@ int Rmpf_cmp_IV(pTHX_ mpf_t * f, SV * iv) {
     mpf_t temp;
     int ret;
 
+    if(!SvIOK(iv))
+      croak("Arg provided to Rmpf_cmp_IV is not an IV");
+
     mpf_init2(temp, 64);
 
     Rmpf_set_IV(aTHX_ &temp, iv);
@@ -474,6 +480,9 @@ int Rmpf_cmp_IV(pTHX_ mpf_t * f, SV * iv) {
 int Rmpf_cmp_NV(pTHX_ mpf_t * f, SV * nv) {
     mpf_t temp;
     int ret;
+
+    if(!SvNOK(nv))
+      croak("In Rmpf_cmp_NV, 2nd argument is not an NV");
 
     mpf_init2(temp, 128);
 
@@ -3246,6 +3255,23 @@ int _SvPOK(pTHX_ SV * in) {
   return 0;
 }
 
+int IOK_flag(SV * sv) {
+  if(SvUOK(sv)) return 2;
+  if(SvIOK(sv)) return 1;
+  return 0;
+}
+
+int POK_flag(SV * sv) {
+  if(SvPOK(sv)) return 1;
+  return 0;
+}
+
+int NOK_flag(SV * sv) {
+  if(SvNOK(sv)) return 1;
+  return 0;
+}
+
+
 int nok_pokflag(void) {
   return nok_pok;
 }
@@ -3330,12 +3356,12 @@ SV * _Rmpf_get_IV(pTHX_ mpf_t * n) {
 int Rmpf_fits_IV_p(pTHX_ mpf_t * n) {
 
 #ifndef MATH_GMPF_NEED_LONG_LONG_INT
-     if(mpf_fits_slong_p(*n)) return 1;
+     if(mpf_fits_slong_p(*n) || mpf_fits_ulong_p(*n)) return 1;
      return 0;
 #else
-     mpf_t _iv_value; /* Holds either IV_MAX or IV_MIN */
+     mpf_t _iv_value; /* Holds either UV_MAX or IV_MIN */
      mpf_t copy;
-     if(mpf_fits_slong_p(*n)) return 1;
+     if(mpf_fits_slong_p(*n) || mpf_fits_ulong_p(*n)) return 1;
      mpf_init_set_str(_iv_value, SvPV_nolen(MATH_GMPf_IV_MIN(aTHX)), 10);
      mpf_init2(copy, mpf_get_prec(*n));
      mpf_trunc(copy, *n);
@@ -3344,7 +3370,7 @@ int Rmpf_fits_IV_p(pTHX_ mpf_t * n) {
        mpf_clear(copy);
        return 0;
      }
-     mpf_set_str(_iv_value, SvPV_nolen(MATH_GMPf_IV_MAX(aTHX)), 10);
+     mpf_set_str(_iv_value, SvPV_nolen(MATH_GMPf_UV_MAX(aTHX)), 10);
      if(mpf_cmp(copy, _iv_value) > 0) {
        mpf_clear(_iv_value);
        mpf_clear(copy);
@@ -3358,6 +3384,8 @@ int Rmpf_fits_IV_p(pTHX_ mpf_t * n) {
 #endif
 }
 
+/*
+ REMOVED
 int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
 
 #ifndef MATH_GMPF_NEED_LONG_LONG_INT
@@ -3382,8 +3410,7 @@ int Rmpf_fits_UV_p(pTHX_ mpf_t * n) {
 
 #endif
 }
-
-
+*/
 
 
 
@@ -4925,6 +4952,18 @@ CODE:
 OUTPUT:  RETVAL
 
 int
+IOK_flag (sv)
+	SV *	sv
+
+int
+POK_flag (sv)
+	SV *	sv
+
+int
+NOK_flag (sv)
+	SV *	sv
+
+int
 nok_pokflag ()
 
 
@@ -4997,12 +5036,5 @@ Rmpf_fits_IV_p (n)
 	mpf_t *	n
 CODE:
   RETVAL = Rmpf_fits_IV_p (aTHX_ n);
-OUTPUT:  RETVAL
-
-int
-Rmpf_fits_UV_p (n)
-	mpf_t *	n
-CODE:
-  RETVAL = Rmpf_fits_UV_p (aTHX_ n);
 OUTPUT:  RETVAL
 
