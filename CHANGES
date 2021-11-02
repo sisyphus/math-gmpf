@@ -4,6 +4,11 @@
    USE_QUADMATH and USE_LONG_DOUBLE (which are already defined by perl headers).
  - Add Rmpf_cmp_NV and Rmpf_cmp_IV
  - Add Rmpf_init_set_NV and Rmpf_init_set_IV
+ - Remove Rmpf_fits_UV_p and alter Rmpf_fits_IV_p to cater for unsigned values (UV).
+   This is now how it should always have been.
+ - Add POK_flag(), IOK_flag(), NOK_flag (@EXPORT_OK only)
+ - 2nd arg to Rmpf_cmp_IV and Rmpf_set_IV must have its IOK flag set.
+ - 2nd arg to Rmpf_cmp_NV and Rmpf_set_NV must have its NOK flag set.
 
 0.44
  - Prototype subroutines listed in 'use subs()'.
