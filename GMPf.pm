@@ -50,6 +50,7 @@ use overload
     @Math::GMPf::EXPORT_OK = qw(
 __GNU_MP_VERSION __GNU_MP_VERSION_MINOR __GNU_MP_VERSION_PATCHLEVEL
 __GNU_MP_RELEASE __GMP_CC __GMP_CFLAGS
+IOK_flag NOK_flag POK_flag
 Rmpf_abs Rmpf_add Rmpf_add_ui Rmpf_ceil Rmpf_clear Rmpf_clear_mpf Rmpf_clear_ptr
 Rmpf_cmp Rmpf_cmp_d Rmpf_cmp_si Rmpf_cmp_ui Rmpf_cmp_NV Rmpf_cmp_IV
 Rmpf_deref2 Rmpf_div Rmpf_div_2exp Rmpf_div_ui
@@ -78,7 +79,7 @@ fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
 Rmpf_get_NV Rmpf_set_NV Rmpf_get_NV_rndn Rmpf_get_d_rndn
-Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
+Rmpf_get_IV Rmpf_set_IV Rmpf_fits_IV_p
     );
     our $VERSION = '0.45';
     #$VERSION = eval $VERSION;
@@ -114,7 +115,7 @@ fgmp_randinit_set fgmp_randinit_default_nobless fgmp_randinit_mt_nobless
 fgmp_randinit_lc_2exp_nobless fgmp_randinit_lc_2exp_size_nobless fgmp_randinit_set_nobless
 fgmp_urandomb_ui fgmp_urandomm_ui
 Rmpf_get_NV Rmpf_set_NV Rmpf_get_NV_rndn Rmpf_get_d_rndn
-Rmpf_get_IV Rmpf_set_IV Rmpf_fits_UV_p Rmpf_fits_IV_p
+Rmpf_get_IV Rmpf_set_IV  Rmpf_fits_IV_p
 )]);
 
 $Math::GMPf::NOK_POK = 0; # Set to 1 to allow warnings in new() and overloaded operations when
