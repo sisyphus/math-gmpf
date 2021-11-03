@@ -448,8 +448,8 @@
     from somewhere other than STDIN.
     To read from STDIN:
        TRmpf_inp_str($rop, *stdin, $base);
-    To read from an open filehandle (let's call it FH):
-       TRmpf_inp_str($rop, \*FH, $base);
+    To read from an open filehandle (let's call it $fh):
+       TRmpf_inp_str($rop, \*$fh, $base);
 
    $bytes_written = Rmpf_out_str([$prefix,] $op, $base, $digits  [, $suffix]);
     BEST TO USE TRmpf_out_str INSTEAD.
@@ -479,8 +479,8 @@
     is different (to match the order of the mpf_out_str args).
     To print to STDERR:
        TRmpf_out_str(*stderr, $base, $digits, $op);
-    To print to an open filehandle (let's call it FH):
-       TRmpf_out_str(\*FH, $base, $digits, $op);
+    To print to an open filehandle (let's call it $fh):
+       TRmpf_out_str(\*$fh, $base, $digits, $op);
 
    #######################
 
