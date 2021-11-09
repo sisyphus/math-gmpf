@@ -2383,7 +2383,7 @@ SV * overload_not_equiv(pTHX_ mpf_t * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-       if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(0);
+       if(SvNVX(b) != SvNVX(b) || (SvNVX(b) != 0 && (SvNVX(b) / SvNVX(b) != 1))) return newSViv(1);
 
        ret = Rmpf_cmp_NV(aTHX_ a, b);
        if(ret != 0) return newSViv(1);
