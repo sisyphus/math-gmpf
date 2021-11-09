@@ -3,7 +3,7 @@ use warnings;
 use Math::GMPf qw(:mpf);
 use Math::BigInt; # for some error checking
 
-print "1..101\n";
+print "1..103\n";
 
 print "# Using gmp version ", Math::GMPf::gmp_v(), "\n";
 
@@ -973,6 +973,7 @@ else {print "ok 70\n"}
 
 #######################
 
+
 if($inf != $mpf1) {print "ok 71\n"}
 else {
   warn "\n $inf == $mpf1\n";
@@ -1185,3 +1186,21 @@ else {
   warn "\n \$\@: $@\n";
   print "not ok 101\n";
 }
+
+my $nv = 'inf' + 0;
+
+if($nv != 0 && $nv / $nv != 1) {
+
+  if($nv != Math::GMPf->new(0)) {print "ok 102\n"}
+  else {print "not ok 102\n"}
+
+  if($nv == Math::GMPf->new(0)) { print "not ok 103\n" }
+  else { print "ok 103\n" }
+
+}
+else {
+  print "skipping tests 102 and 103\n";
+  print "ok 102\n";
+  print "ok 103\n";
+}
+
