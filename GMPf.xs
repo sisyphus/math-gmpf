@@ -3147,14 +3147,10 @@ int _has_longdouble(void) {
 
 /* Has inttypes.h been included ? */
 int _has_inttypes(void) {
-#ifdef _MSC_VER
-return 0;
-#else
 #if defined MATH_GMPF_NEED_LONG_LONG_INT
 return 1;
 #else
 return 0;
-#endif
 #endif
 }
 
