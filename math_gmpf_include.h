@@ -42,9 +42,7 @@ HIGH_SUBNORMAL_EXP       : Highest subnormal exponent value for perl's NV type.
 #include <stdio.h>
 
 #if defined MATH_GMPF_NEED_LONG_LONG_INT
-#ifndef _MSC_VER
 #include <inttypes.h>
-#endif
 #endif
 
 #include <stdlib.h>
@@ -78,12 +76,6 @@ typedef __float128 float128;
 
 #ifdef _MSC_VER
 #pragma warning(disable:4700 4715 4716)
-#endif
-
-#if defined MATH_GMPF_NEED_LONG_LONG_INT
-#ifndef _MSC_VER
-#include <inttypes.h>
-#endif
 #endif
 
 #define NEG_ZERO_BUG 50103 /* A bug affecting mpf_fits_u*_p functions     */
