@@ -19,7 +19,7 @@ int nok_pok = 0; /* flag that is incremented whenever a scalar that is both *
 
 int NOK_POK_val(pTHX) {
   /* return the numeric value of $Math::GMPf::NOK_POK */
-  return SvIV(get_sv("Math::GMPf::NOK_POK", 0));
+  return (int)SvIV(get_sv("Math::GMPf::NOK_POK", 0));
 }
 
 int _is_infstring(char * s) {
@@ -73,7 +73,7 @@ unsigned long Rmpf_get_default_prec(void) {
      }
 
 void Rmpf_set_default_prec(pTHX_ SV * prec) {
-     mpf_set_default_prec(SvUV(prec));
+     mpf_set_default_prec((mp_bitcnt_t)SvUV(prec));
      }
 
 SV * Rmpf_init_set_str_nobless(pTHX_ SV * str, SV * base) {
@@ -82,7 +82,7 @@ SV * Rmpf_init_set_str_nobless(pTHX_ SV * str, SV * base) {
 
      New(1, mpf_t_obj, 1, mpf_t);
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_str_nobless function");
-     if(mpf_init_set_str(*mpf_t_obj, SvPV_nolen(str), SvIV(base)))
+     if(mpf_init_set_str(*mpf_t_obj, SvPV_nolen(str), (int)SvIV(base)))
        croak("First arg to Rmpf_init_set_str_nobless is not a valid base %d number", (signed long int)SvIV(base));
      obj_ref = newSV(0);
      obj = newSVrv(obj_ref, NULL);
@@ -99,7 +99,7 @@ SV * Rmpf_init2_nobless(pTHX_ SV * prec) {
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init2_nobless function");
      obj_ref = newSV(0);
      obj = newSVrv(obj_ref, NULL);
-     mpf_init2 (*mpf_t_obj, SvUV(prec));
+     mpf_init2 (*mpf_t_obj, (mp_bitcnt_t)SvUV(prec));
 
      sv_setiv(obj, INT2PTR(IV,mpf_t_obj));
      SvREADONLY_on(obj);
@@ -113,7 +113,7 @@ SV * Rmpf_init_set_str(pTHX_ SV * str, SV * base) {
 
      New(1, mpf_t_obj, 1, mpf_t);
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_str function");
-     if(mpf_init_set_str(*mpf_t_obj, SvPV_nolen(str), SvIV(base)))
+     if(mpf_init_set_str(*mpf_t_obj, SvPV_nolen(str), (int)SvIV(base)))
        croak("First arg to Rmpf_init_set_str is not a valid base %d number", (int)SvIV(base));
      obj_ref = newSV(0);
      obj = newSVrv(obj_ref, "Math::GMPf");
@@ -130,7 +130,7 @@ SV * Rmpf_init2(pTHX_ SV * prec) {
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init2 function");
      obj_ref = newSV(0);
      obj = newSVrv(obj_ref, "Math::GMPf");
-     mpf_init2 (*mpf_t_obj, SvUV(prec));
+     mpf_init2 (*mpf_t_obj, (mp_bitcnt_t)SvUV(prec));
 
      sv_setiv(obj, INT2PTR(IV,mpf_t_obj));
      SvREADONLY_on(obj);
@@ -561,7 +561,7 @@ void Rmpf_deref2(pTHX_ mpf_t * p, SV * base, SV * n_digits) {
      size_t n_dig = (size_t)SvUV(n_digits);
 
      if(!n_dig) {
-        n_dig = (double)(mpf_get_prec(*p)) / log(b) * log(2);
+        n_dig = (size_t)((double)(mpf_get_prec(*p)) / log(b) * log(2));
         }
 
      if((b < 2 && b > -2) || b > 62 || b < -36) croak("Second argument supplied to Rmpf_get_str is not in acceptable range");
@@ -604,11 +604,11 @@ SV * Rmpf_get_prec(pTHX_ mpf_t * p) {
 }
 
 void Rmpf_set_prec(pTHX_ mpf_t * p, SV * prec) {
-     mpf_set_prec(*p, SvUV(prec));
+     mpf_set_prec(*p, (mp_bitcnt_t)SvUV(prec));
 }
 
 void Rmpf_set_prec_raw(pTHX_ mpf_t * p, SV * prec) {
-     mpf_set_prec_raw(*p, SvUV(prec));
+     mpf_set_prec_raw(*p, (mp_bitcnt_t)SvUV(prec));
 }
 
 void Rmpf_set(mpf_t * p1, mpf_t * p2) {
@@ -777,7 +777,7 @@ respective doubles.
 
 int _rndaz(char *a, IV exponent, UV prec, int display) {
   size_t len;
-  int i, ulp_pos = ULP_INDEX;
+  IV i, ulp_pos = ULP_INDEX;
 
   if(exponent < LOW_SUBNORMAL_EXP) return 0;
 
@@ -789,7 +789,7 @@ int _rndaz(char *a, IV exponent, UV prec, int display) {
 
   if(len <= ulp_pos + 1) return 0;          /* no rounding required */
 
-  if(display) printf("len: %u ULP index: %d\n", (unsigned int)len, ulp_pos);
+  if(display) printf("len: %u ULP index: %d\n", (unsigned int)len, (int)ulp_pos);
 
   if(a[ulp_pos + 1] == '0') return 0;       /* no rounding required */
 
@@ -829,7 +829,7 @@ double Rmpf_get_d_rndn(mpf_t * p) {
   if(_rndaz(buf, (IV)exponent, (UV)n_digits, 0)) {
     /* printf("ROUNDING AWAY FROM ZERO\n"); */
     Safefree(buf);
-    mpf_init2(temp, n_digits);
+    mpf_init2(temp, (mp_bitcnt_t)n_digits);
     mpf_set_ui(temp, 1);
     if(exponent <= 53) mpf_div_2exp(temp, temp, 53 - exponent);
     else mpf_mul_2exp(temp, temp, exponent - 53);
@@ -1498,11 +1498,11 @@ void Rmpf_abs(mpf_t * r, mpf_t * x) {
 }
 
 void Rmpf_mul_2exp(pTHX_ mpf_t * r, mpf_t * x, SV * s) {
-     mpf_mul_2exp(*r, *x, SvUV(s));
+     mpf_mul_2exp(*r, *x, (mp_bitcnt_t)SvUV(s));
 }
 
 void Rmpf_div_2exp(pTHX_ mpf_t * r, mpf_t * x, SV * s) {
-     mpf_div_2exp(*r, *x, SvUV(s));
+     mpf_div_2exp(*r, *x, (mp_bitcnt_t)SvUV(s));
 }
 
 int Rmpf_eq(mpf_t * a, mpf_t * b, unsigned long bits) {
@@ -2440,12 +2440,12 @@ SV * overload_pow(pTHX_ SV * p, SV * second, SV * third) {
 
      if(SV_IS_IOK(second)) {
        if(SvUOK(second)) {
-         mpf_pow_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), SvUV(second));
+         mpf_pow_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), (unsigned long)SvUV(second));
          return obj_ref;
        }
 
        if(SvIV(second) >= 0) {
-         mpf_pow_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), SvUV(second));
+         mpf_pow_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), (unsigned long)SvUV(second));
          return obj_ref;
        }
      }
@@ -2504,7 +2504,7 @@ SV * overload_int(pTHX_ mpf_t * p, SV * second, SV * third) {
 
 void Rmpf_urandomb(pTHX_ SV * p, ...) {
      dXSARGS;
-     unsigned long q, i, thingies;
+     UV q, i, thingies;
 
      thingies = items;
      q = SvUV(ST(thingies - 1));
@@ -2512,7 +2512,7 @@ void Rmpf_urandomb(pTHX_ SV * p, ...) {
      if((q + 3) != thingies) croak ("Wrong args supplied to mpf_urandomb function");
 
      for(i = 0; i < q; ++i) {
-        mpf_urandomb(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), *(INT2PTR(gmp_randstate_t *, SvIVX(SvRV(ST(thingies - 3))))), SvUV(ST(thingies - 2)));
+        mpf_urandomb(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), *(INT2PTR(gmp_randstate_t *, SvIVX(SvRV(ST(thingies - 3))))), (mp_bitcnt_t)SvUV(ST(thingies - 2)));
         }
 
      XSRETURN(0);
@@ -2520,7 +2520,7 @@ void Rmpf_urandomb(pTHX_ SV * p, ...) {
 
 void Rmpf_random2(pTHX_ SV * x, ...){
      dXSARGS;
-     unsigned long q, i, thingies;
+     UV q, i, thingies;
 
      thingies = items;
      q = SvUV(ST(thingies - 1));
@@ -2528,7 +2528,7 @@ void Rmpf_random2(pTHX_ SV * x, ...){
      if((q + 3) != thingies) croak ("Wrong args supplied to mpf_random2 function");
 
      for(i = 0; i < q; ++i) {
-        mpf_random2(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), SvIV(ST(thingies - 3)), SvUV(ST(thingies - 2)));
+        mpf_random2(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), (mp_size_t)SvIV(ST(thingies - 3)), (mp_exp_t)SvUV(ST(thingies - 2)));
         }
 
      XSRETURN(0);
@@ -2849,12 +2849,12 @@ SV * overload_pow_eq(pTHX_ SV * p, SV * second, SV * third) {
 
      if(SV_IS_IOK(second)) {
        if(SvUOK(second)) {
-         mpf_pow_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), SvUV(second));
+         mpf_pow_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), (unsigned long)SvUV(second));
          return p;
        }
 
        if(SvIV(second) >= 0) {
-         mpf_pow_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), SvUV(second));
+         mpf_pow_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(p)))), (unsigned long)SvUV(second));
          return p;
        }
      }
