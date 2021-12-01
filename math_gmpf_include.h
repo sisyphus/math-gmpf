@@ -74,9 +74,11 @@ typedef __float128 float128;
 #define HIGH_SUBNORMAL_EXP		-16381
 #endif
 
+/*
 #ifdef _MSC_VER
 #pragma warning(disable:4700 4715 4716)
 #endif
+*/
 
 #define NEG_ZERO_BUG 50103 /* A bug affecting mpf_fits_u*_p functions     */
                            /* Fixed in gmp after __GNU_MP_RELEASE 50103 ? */
