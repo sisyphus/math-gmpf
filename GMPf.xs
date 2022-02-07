@@ -83,7 +83,7 @@ SV * Rmpf_init_set_str_nobless(pTHX_ SV * str, SV * base) {
      New(1, mpf_t_obj, 1, mpf_t);
      if(mpf_t_obj == NULL) croak("Failed to allocate memory in Rmpf_init_set_str_nobless function");
      if(mpf_init_set_str(*mpf_t_obj, SvPV_nolen(str), (int)SvIV(base)))
-       croak("First arg to Rmpf_init_set_str_nobless is not a valid base %d number", (signed long int)SvIV(base));
+       croak("First arg to Rmpf_init_set_str_nobless is not a valid base %d number", (int)SvIV(base));
      obj_ref = newSV(0);
      obj = newSVrv(obj_ref, NULL);
      sv_setiv(obj, INT2PTR(IV,mpf_t_obj));
