@@ -1632,7 +1632,7 @@ SV * overload_mul(pTHX_ SV * a, SV * b, SV * third) {
 
      if(SV_IS_NOK(b)) {
 
-#if defined(MPFR_PV_NV_BUG)
+#if defined(GMPF_PV_NV_BUG)
        NOK_POK_DUALVAR_CHECK , "overload_mul");}
 #endif
 
