@@ -63,4 +63,24 @@ if($str > 0) {
          "Correctly designated as an NV");                 # Test 7
 }
 
+my $nv_sqrt = sqrt(2);
+my $t = "$nv_sqrt";
+
+# The next 4 tests should fail if the value
+# in the PV slot of $nv_sqrt is used.
+
+Rmpf_set_default_prec(200);
+
+cmp_ok(Math::GMPf->new(1) * $nv_sqrt, '==', sqrt(2),
+       "overload_mul() uses value in NV slot");            # Test 8
+
+cmp_ok(Math::GMPf->new(0) + $nv_sqrt, '==', sqrt(2),
+       "overload_add() uses value in NV slot");            # Test 9
+
+cmp_ok(Math::GMPf->new(0) - $nv_sqrt, '==', -(sqrt(2)),
+       "overload_sub() uses value in NV slot");            # Test 10
+
+cmp_ok(Math::GMPf->new(sqrt 2) / $nv_sqrt, '==', 1.0,
+       "overload_div() uses value in NV slot");            # Test 11
+
 done_testing();
