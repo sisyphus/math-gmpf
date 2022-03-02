@@ -87,7 +87,7 @@ if('inf' > 0 ) {
   }
 
 }
-else { # Instead verify that 'nan' numifies to zero
+else { # Instead verify that 'inf' numifies to zero
   cmp_ok('inf' + 0, '==', 0, "'inf' numifies to zero");    # Test 6 alt.
 }
 
