@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Math::GMPf qw(:mpf);
 
-print "1..36\n";
+print "1..37\n";
 
 my $n = '98765' x 1000;
 my $r = '98765' x 1000;
@@ -346,6 +346,19 @@ if(Math::GMPf::nok_pokflag() == $check) {print "ok 36\n"}
 else {
   warn "\n", Math::GMPf::nok_pokflag(), " != $check\n";
   print "not ok 36\n";
+}
+
+my $nv = 1.3;
+my $s = "$nv";
+
+my $mpf = Math::GMPf->new($nv);
+
+$check++ if GMPF_PV_NV_BUG;
+
+if(Math::GMPf::nok_pokflag() == $check) {print "ok 37\n"}
+else {
+  warn "\n", Math::GMPf::nok_pokflag(), " != $check\n";
+  print "not ok 37\n";
 }
 
 ########
