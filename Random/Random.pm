@@ -20,7 +20,7 @@ sub _issue_19550 { # https://github.com/Perl/perl5/issues/19550
   my $inf = 999 ** (999 ** 999);
   my $discard = "$inf";
   my $inf_copy = $inf;
-  # Using Math::Float128::Constant::_is_NOK_and_POK():
+  # Using Math::GMPf::Random::_is_NOK_and_POK():
   return 1
     if(!_is_NOK_and_POK($inf) && _is_NOK_and_POK($inf_copy));
   return 0;
