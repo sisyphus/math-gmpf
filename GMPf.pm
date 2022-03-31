@@ -18,6 +18,9 @@
     use constant _MATH_MPC_T 	=> 10;
     use constant GMPF_PV_NV_BUG => Math::GMPf::Random::_has_pv_nv_bug();
 
+    # Inspired by https://github.com/Perl/perl5/issues/19550:
+    use constant ISSUE_19550    => Math::GMPf::Random::_issue_19550();
+
 use subs qw( __GNU_MP_VERSION __GNU_MP_VERSION_MINOR __GNU_MP_VERSION_PATCHLEVEL
              __GNU_MP_RELEASE __GMP_CC __GMP_CFLAGS GMP_LIMB_BITS GMP_NAIL_BITS);
 
