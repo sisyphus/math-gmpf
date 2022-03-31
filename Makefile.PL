@@ -92,7 +92,7 @@ if($] < 5.035010) {
     print "\n Not defining GMPF_PV_NV_BUG\n\n";
   }
 }
-else { print "Not defining F128_PV_NV_BUG as perl version >= 5.035010\n\n" }
+else { print "Not defining GMPF_PV_NV_BUG as perl version >= 5.035010\n\n" }
 ####################################
 
 if($^O =~ /MSWin32/i && $] < 5.022) {$defines .= " -D_WIN32_BIZARRE_INFNAN"}
