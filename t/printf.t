@@ -11,9 +11,6 @@ print "# Using gmp version ", Math::GMPf::gmp_v(), "\n";
 
 my($WR1, $WR2, $RD1, $RD2);
 
-open($WR1, '>', 'out21.txt') or die "Can't open WR1: $!";
-open($WR2, '>', 'out22.txt') or die "Can't open WR2: $!";
-
 my $mp = Math::GMPf->new(-1234567);
 my $int = -17;
 my $ul = 56789;
@@ -26,6 +23,9 @@ unless($ENV{SISYPHUS_SKIP}) {
   # Visual Studio, XSubs that take a filehandle as an argument
   # do not work. It therefore suits my purposes to be able to
   # avoid calling (and testing) those particular XSubs
+
+  open($WR1, '>', 'out21.txt') or die "Can't open WR1: $!";
+  open($WR2, '>', 'out22.txt') or die "Can't open WR2: $!";
 
   Rmpf_fprintf(\*$WR1, "An mpf object: %.0Ff ", $mp);
 
