@@ -1466,14 +1466,17 @@ void Rmpf_mul_ui(mpf_t * dest, mpf_t * src, unsigned long num) {
 }
 
 void Rmpf_div(mpf_t * d, mpf_t * p, mpf_t * q) {
+     if(!mpf_cmp_ui(*q, 0)) croak("Division by zero not allowed in Rmpf_div()");
      mpf_div(*d, *p, *q);
 }
 
 void Rmpf_ui_div(mpf_t * d, unsigned long p, mpf_t * q) {
+     if(!mpf_cmp_ui(*q, 0)) croak("Division by zero not allowed in Rmpf_ui_div");
      mpf_ui_div(*d, p, *q);
 }
 
 void Rmpf_div_ui(mpf_t * d, mpf_t * p, unsigned long q) {
+     if(q == 0) croak("Division by zero not allowed in Rmpfr_div_ui");
      mpf_div_ui(*d, *p, q);
 }
 
@@ -1930,25 +1933,25 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
      if(SV_IS_IOK(b)) {
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string (%s) supplied to Math::GMPf::overload_div", SvPV_nolen(b));
-       if(SWITCH_ARGS) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-       else mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
+       if(SWITCH_ARGS) Rmpf_div(mpf_t_obj, mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
+       else Rmpf_div(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), mpf_t_obj);
        return obj_ref;
      }
 #else
      if(SV_IS_IOK(b)) {
        if(SvUOK(b)) {
          if(SWITCH_ARGS) mpf_ui_div(*mpf_t_obj, SvUVX(b), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-         else mpf_div_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
+         else Rmpf_div_ui(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return obj_ref;
        }
 
        if(SvIV(b) >= 0) {
-         if(SWITCH_ARGS) mpf_ui_div(*mpf_t_obj, SvUVX(b), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-         else mpf_div_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
+         if(SWITCH_ARGS) Rmpf_ui_div(mpf_t_obj, SvUVX(b), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
+         else Rmpf_div_ui(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return obj_ref;
        }
-       if(SWITCH_ARGS) mpf_ui_div(*mpf_t_obj, SvIVX(b) * -1, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-       else mpf_div_ui(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
+       if(SWITCH_ARGS) Rmpf_ui_div(mpf_t_obj, SvIVX(b) * -1, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
+       else Rmpf_div_ui(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        mpf_neg(*mpf_t_obj, *mpf_t_obj);
        return obj_ref;
      }
@@ -1965,8 +1968,8 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
 
        if(mpf_set_str(*mpf_t_obj, SvPV_nolen(b), 10))
          croak("Invalid string (%s) supplied to Math::GMPf::overload_div", SvPV_nolen(b));
-       if(SWITCH_ARGS) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-       else mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
+       if(SWITCH_ARGS) Rmpf_div(mpf_t_obj, mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
+       else Rmpf_div(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), mpf_t_obj);
        return obj_ref;
      }
 
@@ -1984,13 +1987,13 @@ SV * overload_div(pTHX_ SV * a, SV * b, SV * third) {
        Rmpf_set_d(mpf_t_obj, SvNVX(b));
 #endif
        if(SWITCH_ARGS) mpf_div(*mpf_t_obj, *mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
-       else mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *mpf_t_obj);
+       else Rmpf_div(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), mpf_t_obj);
        return obj_ref;
      }
 
      if(sv_isobject(b)) {
        if(strEQ(h, "Math::GMPf")) {
-         mpf_div(*mpf_t_obj, *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
+         Rmpf_div(mpf_t_obj, (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return obj_ref;
        }
        if(strEQ(h, "Math::MPFR")) {
@@ -2908,22 +2911,22 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
          SvREFCNT_dec(a);
          croak("Invalid string (%s) supplied to Math::GMPf::overload_div_eq", SvPV_nolen(b));
        }
-       mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       Rmpf_div((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), &t);
        mpf_clear(t);
        return a;
      }
 #else
      if(SV_IS_IOK(b)) {
        if(SvUOK(b)) {
-         mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
+         Rmpf_div_ui((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
        }
 
        if(SvIV(b) >= 0) {
-         mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
+         Rmpf_div_ui((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvUVX(b));
          return a;
        }
-       mpf_div_ui(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
+       Rmpf_div_ui((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), SvIVX(b) * -1);
        mpf_neg(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))));
        return a;
      }
@@ -2942,7 +2945,7 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
          SvREFCNT_dec(a);
          croak("Invalid string (%s) supplied to Math::GMPf::overload_div_eq", SvPV_nolen(b));
        }
-       mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       Rmpf_div((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), &t);
        mpf_clear(t);
        return a;
      }
@@ -2965,7 +2968,7 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
        mpf_init2(t, 53);
        Rmpf_set_d(&t, SvNVX(b));
 #endif
-       mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), t);
+       Rmpf_div((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), &t);
        mpf_clear(t);
        return a;
      }
@@ -2973,7 +2976,7 @@ SV * overload_div_eq(pTHX_ SV * a, SV * b, SV * third) {
      if(sv_isobject(b)) {
        const char * h = HvNAME(SvSTASH(SvRV(b)));
        if(strEQ(h, "Math::GMPf")) {
-         mpf_div(*(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(a)))), *(INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
+         Rmpf_div((INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(a)))), (INT2PTR(mpf_t *, SvIVX(SvRV(b)))));
          return a;
        }
      }
