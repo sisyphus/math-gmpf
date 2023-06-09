@@ -3,7 +3,7 @@ use warnings;
 use Math::GMPf qw(:mpf);
 use Math::BigInt; # for some error checking
 
-print "1..103\n";
+print "1..106\n";
 
 print "# Using gmp version ", Math::GMPf::gmp_v(), "\n";
 
@@ -1202,5 +1202,27 @@ else {
   print "skipping tests 102 and 103\n";
   print "ok 102\n";
   print "ok 103\n";
+}
+
+my $obj0 = Math::GMPf->new(sqrt 2);
+my $obj1 = $obj0++;
+
+if($obj1 - $obj0 == -1) {print "ok 104\n"}
+else {
+  warn "$obj1 is not 1 less than $obj0\n";
+  print "not ok 104\n";
+}
+
+my $obj2 = ++$obj0;
+if($obj2 == $obj0) {print "ok 105\n"}
+else {
+  warn "$obj2 != $obj0\n";
+  print "not ok 105\n";
+}
+
+if($obj2 - $obj1 == 2) {print "ok 106\n"}
+else {
+  warn "$obj2 is not 2 greater than $obj1\n";
+  print "not ok 106\n";
 }
 
