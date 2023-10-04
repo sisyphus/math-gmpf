@@ -3,6 +3,7 @@ Revision history for Perl module Math::GMPf
 0.52
  - Division-by-zero now croaks, rather than die in silence.
  - Simplify overloading of '++' and '--'.
+ - Avoid monitoring PL_markstack_ptr in GMPf.xs and Random/Random.xs
 
 0.51
  - Add Random/t/a_v_random.t
