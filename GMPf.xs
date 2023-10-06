@@ -3671,35 +3671,17 @@ void
 _Rmpf_set_ld (q, p)
 	mpf_t *	q
 	SV *	p
-        PREINIT:
-        I32* temp;
-        PPCODE:
-        temp = PL_markstack_ptr++;
+        CODE:
         _Rmpf_set_ld(aTHX_ q, p);
-        if (PL_markstack_ptr != temp) {
-          /* truly void, because dXSARGS not invoked */
-          PL_markstack_ptr = temp;
-          XSRETURN_EMPTY; /* return empty stack */
-        }
-        /* must have used dXSARGS; list context implied */
-        return; /* assume stack size is correct */
+        XSRETURN_EMPTY; /* return empty stack */
 
 void
 _Rmpf_set_float128 (q, p)
 	mpf_t *	q
 	SV *	p
-        PREINIT:
-        I32* temp;
-        PPCODE:
-        temp = PL_markstack_ptr++;
+        CODE:
         _Rmpf_set_float128(aTHX_ q, p);
-        if (PL_markstack_ptr != temp) {
-          /* truly void, because dXSARGS not invoked */
-          PL_markstack_ptr = temp;
-          XSRETURN_EMPTY; /* return empty stack */
-        }
-        /* must have used dXSARGS; list context implied */
-        return; /* assume stack size is correct */
+        XSRETURN_EMPTY; /* return empty stack */
 
 void
 Rmpf_set_d (p, d)
