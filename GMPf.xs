@@ -2622,7 +2622,7 @@ void Rmpf_urandomb(pTHX_ SV * p, ...) {
      for(i = 0; i < q; ++i) {
         mpf_urandomb(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), *(INT2PTR(gmp_randstate_t *, SvIVX(SvRV(ST(thingies - 3))))), (mp_bitcnt_t)SvUV(ST(thingies - 2)));
         }
-     PL_markstack_ptr++;
+
      XSRETURN(0);
 }
 
@@ -2638,7 +2638,7 @@ void Rmpf_random2(pTHX_ SV * x, ...){
      for(i = 0; i < q; ++i) {
         mpf_random2(*(INT2PTR(mpf_t *, SvIVX(SvRV(ST(i))))), (mp_size_t)SvIV(ST(thingies - 3)), (mp_exp_t)SvUV(ST(thingies - 2)));
         }
-     PL_markstack_ptr++;
+
      XSRETURN(0);
 }
 
@@ -4466,6 +4466,7 @@ void
 Rmpf_urandomb (p, ...)
 	SV *	p
         CODE:
+        PL_markstack_ptr++;
         Rmpf_urandomb(aTHX_ p);
         XSRETURN_EMPTY; /* return empty stack */
 
@@ -4473,6 +4474,7 @@ void
 Rmpf_random2 (x, ...)
 	SV *	x
         CODE:
+        PL_markstack_ptr++;
         Rmpf_random2(aTHX_ x);
         XSRETURN_EMPTY; /* return empty stack */
 
