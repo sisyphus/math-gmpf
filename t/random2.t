@@ -17,7 +17,7 @@ package Number {
         Number->new($$self + $$n);
     }
 
-    my $srand = srand();
+    my $srand = 1171043305;
     my $state = Math::GMPf::fgmp_randinit_mt();
     Math::GMPf::fgmp_randseed_ui($state, $srand);
 
