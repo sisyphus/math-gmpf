@@ -571,11 +571,10 @@ void Rmpf_deref2(pTHX_ mpf_t * p, SV * base, SV * n_digits) {
 
      mpf_get_str(out, &ptr, b, SvUV(n_digits), *p);
 
-     /* sp = mark; */ /* not needed */
      ST(0) = sv_2mortal(newSVpv(out, 0));
      Safefree(out);
      ST(1) = sv_2mortal(newSViv(ptr));
-     /* PUTBACK; */ /* not needed */
+     PL_markstack_ptr++;
      XSRETURN(2);
 }
 
