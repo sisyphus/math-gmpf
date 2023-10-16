@@ -34,6 +34,7 @@ t/printf.t
 t/PV_NV_BUG.t
 t/pod.t
 t/random2.t
+t/random3.t
 t/test1.t
 t/TRmpf_out_str.t
 t/use64bitint.t
