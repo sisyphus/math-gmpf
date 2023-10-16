@@ -574,7 +574,6 @@ void Rmpf_deref2(pTHX_ mpf_t * p, SV * base, SV * n_digits) {
      ST(0) = sv_2mortal(newSVpv(out, 0));
      Safefree(out);
      ST(1) = sv_2mortal(newSViv(ptr));
-     PL_markstack_ptr++;
      XSRETURN(2);
 }
 
@@ -1433,7 +1432,6 @@ void Rmpf_get_d_2exp(pTHX_ mpf_t * n) {
      ST(0) = sv_2mortal(newSVnv(d));
      ST(1) = sv_2mortal(newSViv(exp));
      /* PUTBACK; */
-     PL_markstack_ptr++;
      XSRETURN(2);
 }
 
@@ -3784,6 +3782,7 @@ Rmpf_deref2 (p, base, n_digits)
 	SV *	base
 	SV *	n_digits
         CODE:
+        PL_markstack_ptr++;
         Rmpf_deref2(aTHX_ p, base, n_digits);
         return; /* assume stack size is correct */
 
@@ -4085,6 +4084,7 @@ void
 Rmpf_get_d_2exp (n)
 	mpf_t *	n
         CODE:
+        PL_markstack_ptr++;
         Rmpf_get_d_2exp(aTHX_ n);
         return; /* assume stack size is correct */
 
