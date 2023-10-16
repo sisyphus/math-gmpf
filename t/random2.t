@@ -1,8 +1,21 @@
 # Based on a demo script provided provided by Trizen.
 # See https://github.com/sisyphus/math-gmpz/issues/5
 
+# This script is the same t/random3.t, except that it
+# uses a syntax to create package Number that requires
+# perl-5.14.0 or later
+
 use Math::GMPf;
 use Test::More;
+
+BEGIN {
+  if($] < 5.014) {
+    warn "Skipping all tests - version 5.14.0 or later required\n";
+    is(1, 1,);
+    done_testing();
+    exit 0;
+  }
+};
 
 package Number {
 
