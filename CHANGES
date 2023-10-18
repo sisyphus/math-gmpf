@@ -1,5 +1,7 @@
 Revision history for Perl module Math::GMPf
 
+0.53
+
 0.52
  - Division-by-zero now croaks, rather than die in silence.
  - Simplify overloading of '++' and '--'.
