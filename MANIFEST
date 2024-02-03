@@ -5,6 +5,7 @@ GMPf.pm
 GMPf.pod
 GMPf.xs
 math_gmpf_include.h
+math_gmpf_unused.h
 V/V.xs
 V/V.pm
 V/Makefile.PL
