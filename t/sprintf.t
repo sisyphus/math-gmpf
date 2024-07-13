@@ -39,7 +39,8 @@ cmp_ok($buf, 'eq', 'hello world', "'hello world' ok for PV");
 
 if($have_mpz) {
   Rmpf_sprintf($buf, "%Zd", Math::GMPz->new(~0), $buflen);
-  cmp_ok($buf, 'eq', '18446744073709551615', "Math::GMPz: ~0 ok");
+  my $not_zero = ~0;
+  cmp_ok($buf, 'eq', "$not_zero", "Math::GMPz: ~0 ok");
 }
 
 if($have_mpq) {
