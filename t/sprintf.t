@@ -48,4 +48,16 @@ if($have_mpq) {
   cmp_ok($buf, 'eq', '19/21', "Math::GMPq: 19/21 ok");
 }
 
+if($Config{nvsize} == 8) {
+  Rmpf_sprintf($buf, "%a", sqrt 2, 32);
+  $buf =~ s/^0x//i;
+  $buf =~ s/p/@/i;
+  cmp_ok(Math::GMPf->new($buf, 16), '==', sqrt(2), 'Rmpf_sprintf() reads "%a" correctly');
+
+  Rmpf_sprintf($buf, "%A", sqrt 2, 32);
+  $buf =~ s/^0x//i;
+  $buf =~ s/p/@/i;
+  cmp_ok(Math::GMPf->new($buf, 16), '==', sqrt(2), 'Rmpf_sprintf() reads "%A" correctly');
+}
+
 done_testing();
