@@ -5,7 +5,9 @@ use Math::GMPf qw(__GNU_MP_VERSION __GNU_MP_VERSION_MINOR __GNU_MP_VERSION_PATCH
 use Math::GMPf::V;
 
 my $tests = 9;
-my $skip = $^O =~ /MSWin/ && $Config{cc} eq 'cl' ? 2 : 0; # Skip 2 tests for MSVC-built perls
+# Skip 2 tests for MSVC-built perls as vcpkg-builds of gmp
+# may not define __GMP_CC and__GMP_CFLAGS.
+my $skip = $^O =~ /MSWin/ && $Config{cc} eq 'cl' ? 2 : 0;
 $tests -= $skip;
 
 print "1..$tests\n";
@@ -14,6 +16,7 @@ warn "\n# Using Math::GMPf version ", $Math::GMPf::VERSION, "\n";
 warn "# Using gmp library version ", Math::GMPf::gmp_v(), "\n";
 warn "# CC is ", Math::GMPf::__GMP_CC, "\n" if defined Math::GMPf::__GMP_CC;
 warn "# CFLAGS are ", Math::GMPf::__GMP_CFLAGS, "\n" if defined Math::GMPf::__GMP_CFLAGS;
+warn "# GMPF_WIN32_FMT_BUG is ", Math::GMPf::GMPF_WIN32_FMT_BUG, "\n";
 warn "# GMP_LIMB_BITS is ", Math::GMPf::GMP_LIMB_BITS, "\n" if defined Math::GMPf::GMP_LIMB_BITS;
 warn "# GMP_NAIL_BITS is ", Math::GMPf::GMP_NAIL_BITS, "\n" if defined Math::GMPf::GMP_NAIL_BITS;
 

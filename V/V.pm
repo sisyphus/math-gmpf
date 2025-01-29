@@ -14,6 +14,16 @@ DynaLoader::bootstrap Math::GMPf::V $VERSION;
 @Math::GMPf::V::EXPORT = ();
 @Math::GMPf::V::EXPORT_OK = ();
 
+sub _buggy {
+  return 0 unless $^O =~ /MSWin/;
+  my $cc = ___GMP_CC();		# __GMP_CC
+  my $cflags = ___GMP_CFLAGS();	# __GMP_CFLAGS
+
+  return 1 if ( !defined($cc)     || $cc     !~/\-D__USE_MINGW_ANSI_STDIO/ );
+  return 1 if ( !defined($cflags) || $cflags !~/\-D__USE_MINGW_ANSI_STDIO/ );
+  return 0;
+}
+
 sub dl_load_flags {0} # Prevent DynaLoader from complaining and croaking
 
 1;
