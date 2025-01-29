@@ -45,7 +45,8 @@ if($have_mpq) {
   cmp_ok($buf, 'eq', '19/21', "Math::GMPq: 19/21 ok");
 }
 
-if($Config{nvsize} == 8) {
+# Next 2 tests on Win32 might fail if GMPF_WIN32_FMT_BUG is TRUE.
+if($Config{nvsize} == 8 && !Math::GMPf::GMPF_WIN32_FMT_BUG) {
   Rmpf_sprintf($buf, "%a", sqrt 2, 32);
   $buf =~ s/^0x//i;
   $buf =~ s/p/@/i;
