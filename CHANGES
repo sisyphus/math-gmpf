@@ -1,6 +1,10 @@
 Revision history for Perl module Math::GMPf
 
 0.54
+ - Ensure that overloaded <=> operations return one of 1, -1, 0, and undef.
+   Required some amendments to GMPz.xs, and some rewriting of parts of some
+   test scripts.
+   Issue raised by https://rt.cpan.org/Ticket/Display.html?id=168076 .
 
 0.53
  - On Windows only: set the constant GMPF_WIN32_FMT_BUG to 0 if the gmp
