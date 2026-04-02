@@ -1,5 +1,7 @@
 Revision history for Perl module Math::GMPf
 
+0.55
+
 0.54
  - Ensure that overloaded <=> operations return one of 1, -1, 0, and undef.
    Required some amendments to GMPf.xs, and some rewriting of parts of some
