@@ -4,8 +4,6 @@ use Math::GMPf qw(:mpf IOK_flag NOK_flag POK_flag);
 use Config;
 use POSIX;
 
-#print "1..12\n";
-
 use Test::More;
 
 my ($prec, $nv_max);
@@ -93,6 +91,9 @@ elsif(Math::MPFR::MPFR_VERSION() <= 196868 && $Config{nvtype} ne 'double') { # l
 }
 else {
 
+  warn "Using Math::MPFR::VERSION $Math::MPFR::VERSION\n";
+  warn "Using MPFR library version ", Math::MPFR::MPFR_VERSION_STRING(), "\n";
+
   my $ok = 1;
 
   Math::MPFR::Rmpfr_set_default_prec($prec);
@@ -104,7 +105,7 @@ else {
       my $str = random_string($bits) . "e$_";
 
       my $mpf  = Math::GMPf->new($str, -2);
-      my $mpfr = Math::MPFR->new($str,  2);
+      my $mpfr = Math::MPFR->new($str,  2); # Precision of $mpfr is always 128
 
       my $mpf_d  = Rmpf_get_NV_rndn($mpf);
 
@@ -124,11 +125,11 @@ else {
             printf "GMPf: %La\n", $mpf_d;
             printf "MPFR: %La\n", $mpfr_d;
           }
-          warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
+          warn  "Difference: ", $mpf_d - $mpfr_d, "\n";
           my @args = Rmpf_deref2($mpf, 2, $prec);
-          my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
+          my $rndaz = Math::GMPf::_rndaz(@args, 1);
           Math::MPFR::Rmpfr_dump($mpfr);
-          print $rndaz, "\n";
+          warn "Math::GMPf::_rndaz() returned: $rndaz\n";
           $print_err++;
         }
       }
