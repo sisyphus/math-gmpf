@@ -35,7 +35,7 @@ else {
   }
 }
 
-$prec = 128; # Cover precisions of all NV's
+$prec = 113; # Cover precisions of all NV's
 
 Rmpf_set_default_prec ($prec);
 
@@ -99,13 +99,19 @@ else {
   Math::MPFR::Rmpfr_set_default_prec($prec);
 
   my $print_err = 0;
+  my $skip = 0;
+  my $fmt = "%La\n";
+  $fmt = "%a\n" if $Config{nvsize} == 8;
 
-  for my $bits(128, 117, 110, 68, 57) {
+  for my $bits(113, 110, 91, 68, 57) {
     for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
       my $str = random_string($bits) . "e$_";
-
       my $mpf  = Math::GMPf->new($str, -2);
-      my $mpfr = Math::MPFR->new($str,  2); # Precision of $mpfr is always 128
+      my $mpfr = Math::MPFR->new($str,  2); # Precision of $mpfr is always 113
+
+      # To check the functionality of the below if{} block,
+      # uncommenting the next line will force the required inequality:
+      # $mpfr *= -1;
 
       my $mpf_d  = Rmpf_get_NV_rndn($mpf);
 
@@ -116,21 +122,14 @@ else {
         my $mpf_d_pack   = scalar reverse unpack "h*", pack "F", $mpf_d;
         my $mpfr_d_pack  = scalar reverse unpack "h*", pack "F", $mpfr_d;
         if($print_err < 6) { # give specifics for first 6 errors only.
-          warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
-          if($Config{nvtype} eq 'double') {
-            printf "GMPf: %a\n", $mpf_d;
-            printf "MPFR: %a\n", $mpfr_d;
-          }
-          else {
-            printf "GMPf: %La\n", $mpf_d;
-            printf "MPFR: %La\n", $mpfr_d;
-          }
+          warn "$str\nPacked GMPf: $mpf_d_pack\nPacked MPFR: $mpfr_d_pack\n";
+          warn sprintf("GMPf: $fmt", $mpf_d);
+          warn sprintf("MPFR: $fmt", $mpfr_d);
           warn  "Difference: ", $mpf_d - $mpfr_d, "\n";
-          my @args = Rmpf_deref2($mpf, 2, $prec);
-          my $rndaz = Math::GMPf::_rndaz(@args, 1);
-          Math::MPFR::Rmpfr_dump($mpfr);
-          warn "Math::GMPf::_rndaz() returned: $rndaz\n";
+          my @v = Math::MPFR::Rmpfr_deref2($mpfr, 2, 0, 0);
+          print STDERR "MPFR DUMP:\n" . $v[0] . "e" . $v[1] . "\n\n";
           $print_err++;
+          # exit 0; # Abort after first failure
         }
       }
     }
@@ -142,7 +141,7 @@ else {
 
   $print_err = 0;
 
-  for my $bits(128, 117, 110, 68, 57) {
+  for my $bits(113, 110, 91, 68, 57) {
     for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
       my $str = random_string($bits) . "e$_";
 
