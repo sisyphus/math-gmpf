@@ -35,7 +35,7 @@ else {
   }
 }
 
-$prec = 113; # Cover precisions of all NV's
+$prec = 128; # Cover precisions of all NV's
 
 Rmpf_set_default_prec ($prec);
 
@@ -91,7 +91,7 @@ elsif(Math::MPFR::MPFR_VERSION() <= 196868 && $Config{nvtype} ne 'double') { # l
 }
 else {
 
-  warn "Using Math::MPFR::VERSION $Math::MPFR::VERSION\n";
+  warn "\nUsing Math::MPFR::VERSION $Math::MPFR::VERSION\n";
   warn "Using MPFR library version ", Math::MPFR::MPFR_VERSION_STRING(), "\n";
 
   my $ok = 1;
@@ -105,9 +105,14 @@ else {
 
   for my $bits(113, 110, 91, 68, 57) {
     for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
-      my $str = random_string($bits) . "e$_";
+      my $str;
+      if($skip) { $str = random_string($bits) . "e$_";}
+      else {
+        $str = '-0.1000101110011111111000011011010110011100101110000110110100100000101100110101111011000000010011000111000111000001011001100111111e-16382';
+        $skip++;
+      }
       my $mpf  = Math::GMPf->new($str, -2);
-      my $mpfr = Math::MPFR->new($str,  2); # Precision of $mpfr is always 113
+      my $mpfr = Math::MPFR->new($str,  2);
 
       # To check the functionality of the below if{} block,
       # uncommenting the next line will force the required inequality:
@@ -141,7 +146,7 @@ else {
 
   $print_err = 0;
 
-  for my $bits(113, 110, 91, 68, 57) {
+  for my $bits(128, 113, 110, 91, 68, 57) {
     for(-16500..-16350, -1100..-950, -200..200, 900..1050, 16400..16600) {
       my $str = random_string($bits) . "e$_";
 
@@ -175,14 +180,8 @@ else {
         if($print_err < 6) { # give specifics for first 6 errors only.
           warn "GMPf: $mpf_d\nMPFR: $mpfr_d\n";
           warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
-          if($Config{nvtype} eq 'double') {
-            printf "GMPf: %a\n", $mpf_d;
-            printf "MPFR: %a\n", $mpfr_d;
-          }
-          else {
-            printf "GMPf: %La\n", $mpf_d;
-            printf "MPFR: %La\n", $mpfr_d;
-          }
+          warn sprintf("GMPf: $fmt", $mpf_d);
+          warn sprintf("MPFR: $fmt", $mpfr_d);
           warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
           Math::MPFR::Rmpfr_dump($mpfr);
           $print_err++;
@@ -218,19 +217,10 @@ else {
       if($print_err < 6) { # give specifics for first 6 errors only.
         warn "GMPf: $mpf_d\nMPFR: $mpfr_d\n";
         warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
-        if($Config{nvtype} eq 'double') {
-          printf "GMPf: %a\n", $mpf_d;
-          printf "MPFR: %a\n", $mpfr_d;
-        }
-        else {
-          printf "GMPf: %La\n", $mpf_d;
-          printf "MPFR: %La\n", $mpfr_d;
-        }
+        warn sprintf("GMPf: $fmt", $mpf_d);
+        warn sprintf("MPFR: $fmt", $mpfr_d);
         warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
-        my @args = Rmpf_deref2($mpf, 2, $prec);
-        my $rndaz = Math::GMPf::_rndaz(@args, $prec, 1);
         Math::MPFR::Rmpfr_dump($mpfr);
-        print $rndaz, "\n";
         $print_err++;
       }
     }
@@ -274,12 +264,8 @@ else {
       if($print_err < 6) { # give specifics for first 6 errors only.
         warn "$str\nGMPf: $mpf_d_pack\nMPFR: $mpfr_d_pack\n";
         if($Config{nvtype} eq 'double') {
-          printf "GMPf: %a\n", $mpf_d;
-          printf "MPFR: %a\n", $mpfr_d;
-        }
-        else {
-          printf "GMPf: %La\n", $mpf_d;
-          printf "MPFR: %La\n", $mpfr_d;
+          warn sprintf("GMPf: $fmt", $mpf_d);
+          warn sprintf("MPFR: $fmt", $mpfr_d);
         }
         warn  "Difference: ",$mpf_d - $mpfr_d, "\n";
         Math::MPFR::Rmpfr_dump($mpfr);
